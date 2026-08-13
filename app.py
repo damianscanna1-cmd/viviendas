@@ -131,7 +131,7 @@ if modo == "Vista Cliente":
             st.markdown("---")
             st.link_button(
                 "💬 Contactar por WhatsApp" if is_es else "💬 Contact via WhatsApp",
-                "https://wa.me/34000000000"
+                "https://wa.me/346371128212"
             )
         elif pass_input != "":
             st.error("Contraseña incorrecta." if is_es else "Incorrect password.")
