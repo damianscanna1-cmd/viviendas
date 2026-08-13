@@ -63,16 +63,21 @@ def guardar_datos(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# Componente HTML/JS para el carrusel interactivo en formato panorámico 2.4:1
-def render_carrusel(imagenes, height=520):
+# Galería Unificada (Foto Principal + Carrusel + Ampliación Fullscreen)
+def render_galeria(imagenes, is_es=True, height=580):
     imgs_json = json.dumps(imagenes)
+    expand_txt = "🔍 Ampliar Foto" if is_es else "🔍 Enlarge Photo"
+    close_txt = "Cerrar [ESC]" if is_es else "Close [ESC]"
+    
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; }}
-      .carousel-container {{
+      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; }}
+      
+      /* Visor Principal Panorámico 2.4:1 */
+      .gallery-container {{
         position: relative;
         width: 100%;
         max-width: 1100px;
@@ -98,15 +103,17 @@ def render_carrusel(imagenes, height=520):
         height: 100%;
         object-fit: cover;
       }}
+      
+      /* Zonas Clic para Navegar */
       .click-zone {{
         position: absolute;
         top: 0;
         height: 100%;
-        width: 50%;
+        width: 35%;
         cursor: pointer;
         display: flex;
         align-items: center;
-        transition: background 0.2s;
+        z-index: 2;
       }}
       .click-zone-left {{
         left: 0;
@@ -139,11 +146,21 @@ def render_carrusel(imagenes, height=520):
         background: rgba(197, 168, 128, 0.9);
         color: #0f1115;
       }}
-      .counter-badge {{
+
+      /* Barra de Controles Inferior */
+      .bottom-bar {{
         position: absolute;
         bottom: 16px;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        z-index: 3;
+        pointer-events: none;
+      }}
+      .counter-badge {{
         background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
         padding: 6px 18px;
@@ -153,22 +170,128 @@ def render_carrusel(imagenes, height=520):
         border: 1px solid #c5a880;
         letter-spacing: 0.5px;
       }}
+      .expand-btn {{
+        pointer-events: auto;
+        background: rgba(197, 168, 128, 0.9);
+        color: #0f1115;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        border: 1px solid #c5a880;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      }}
+      .expand-btn:hover {{
+        background: #ffffff;
+        color: #0f1115;
+        transform: scale(1.05);
+      }}
+
+      /* MODAL FULLSCREEN (Visor de Ampliación) */
+      .modal-overlay {{
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.94);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }}
+      .modal-overlay.active {{
+        display: flex;
+      }}
+      .modal-img {{
+        max-width: 92vw;
+        max-height: 82vh;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 0 35px rgba(0,0,0,0.9);
+      }}
+      .modal-close {{
+        position: absolute;
+        top: 20px;
+        right: 25px;
+        background: rgba(197, 168, 128, 0.9);
+        color: #0f1115;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }}
+      .modal-close:hover {{
+        background: #fff;
+      }}
+      .modal-nav {{
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(15, 17, 21, 0.8);
+        color: #c5a880;
+        border: 1px solid #c5a880;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }}
+      .modal-nav:hover {{
+        background: #c5a880;
+        color: #0f1115;
+      }}
+      .modal-prev {{ left: 30px; }}
+      .modal-next {{ right: 30px; }}
+      .modal-counter {{
+        margin-top: 15px;
+        color: #c5a880;
+        font-size: 15px;
+        font-weight: 600;
+      }}
     </style>
     </head>
     <body>
-      <div class="carousel-container">
+      <div class="gallery-container">
         <div class="img-wrapper">
-          <img id="slide" src="" alt="Galería">
+          <img id="slide" src="" alt="Galería" onclick="openModal()" style="cursor: zoom-in;" title="Haz clic para ampliar">
         </div>
-        <!-- Clic Izquierda: Retroceder -->
-        <div class="click-zone click-zone-left" onclick="prevSlide()" title="Foto anterior">
+        
+        <!-- Flecha Izquierda -->
+        <div class="click-zone click-zone-left" onclick="prevSlide(event)" title="Foto anterior">
           <div class="arrow-btn">&#10094;</div>
         </div>
-        <!-- Clic Derecha: Avanzar -->
-        <div class="click-zone click-zone-right" onclick="nextSlide()" title="Siguiente foto">
+        
+        <!-- Flecha Derecha -->
+        <div class="click-zone click-zone-right" onclick="nextSlide(event)" title="Siguiente foto">
           <div class="arrow-btn">&#10095;</div>
         </div>
-        <div id="badge" class="counter-badge">1/1</div>
+
+        <!-- Barra Inferior -->
+        <div class="bottom-bar">
+          <div id="badge" class="counter-badge">1/1</div>
+          <button class="expand-btn" onclick="openModal()">{expand_txt}</button>
+        </div>
+      </div>
+
+      <!-- MODAL FULLSCREEN -->
+      <div id="modal" class="modal-overlay">
+        <button class="modal-close" onclick="closeModal()">{close_txt}</button>
+        <div class="modal-nav modal-prev" onclick="prevSlide(event)">&#10094;</div>
+        <img id="modal-slide" class="modal-img" src="" alt="Ampliación">
+        <div class="modal-nav modal-next" onclick="nextSlide(event)">&#10095;</div>
+        <div id="modal-badge" class="modal-counter">1/1</div>
       </div>
 
       <script>
@@ -176,19 +299,40 @@ def render_carrusel(imagenes, height=520):
         let current = 0;
 
         function render() {{
-          document.getElementById('slide').src = "data:image/jpeg;base64," + photos[current];
-          document.getElementById('badge').innerText = (current + 1) + "/" + photos.length;
+          const src = "data:image/jpeg;base64," + photos[current];
+          document.getElementById('slide').src = src;
+          document.getElementById('modal-slide').src = src;
+          
+          const label = (current + 1) + "/" + photos.length;
+          document.getElementById('badge').innerText = label;
+          document.getElementById('modal-badge').innerText = label;
         }}
 
-        function nextSlide() {{
+        function nextSlide(e) {{
+          if (e) e.stopPropagation();
           current = (current + 1) % photos.length;
           render();
         }}
 
-        function prevSlide() {{
+        function prevSlide(e) {{
+          if (e) e.stopPropagation();
           current = (current - 1 + photos.length) % photos.length;
           render();
         }}
+
+        function openModal() {{
+          document.getElementById('modal').classList.add('active');
+        }}
+
+        function closeModal() {{
+          document.getElementById('modal').classList.remove('active');
+        }}
+
+        document.addEventListener('keydown', function(e) {{
+          if (e.key === 'Escape') closeModal();
+          if (e.key === 'ArrowRight') nextSlide();
+          if (e.key === 'ArrowLeft') prevSlide();
+        }});
 
         render();
       </script>
@@ -229,18 +373,12 @@ if modo == "Vista Cliente":
             st.header(titulo)
             st.caption(f"📍 {prop_data['ubicacion']}")
 
-            # FOTOGRAFÍAS (Imagen Principal + Carrusel)
+            # FOTOGRAFÍAS (Galería Unificada)
             imagenes = prop_data.get("imagenes", [])
             if imagenes:
-                st.subheader("⭐ Foto Principal" if is_es else "⭐ Main Featured Photo")
-                img_principal = base64.b64decode(imagenes[0])
-                st.image(img_principal, use_container_width=True)
-
-                if len(imagenes) > 1:
-                    st.markdown("---")
-                    st.subheader("📸 Galería Completa" if is_es else "📸 Full Photo Gallery")
-                    st.caption("💡 Haz clic a la **derecha** de la imagen para avanzar o a la **izquierda** para retroceder." if is_es else "💡 Click on the **right** of the image to advance or **left** to go back.")
-                    render_carrusel(imagenes)
+                st.subheader("📸 Galería de Fotografías" if is_es else "📸 Photo Gallery")
+                st.caption("💡 Haz clic a la **derecha/izquierda** para navegar, o pulsa en **🔍 Ampliar Foto** (o sobre la imagen) para ver en pantalla completa." if is_es else "💡 Click **left/right** to navigate, or press **🔍 Enlarge Photo** (or image) for full screen.")
+                render_galeria(imagenes, is_es=is_es)
             else:
                 st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
 
