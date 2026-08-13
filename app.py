@@ -4,6 +4,7 @@ import os
 import base64
 from PIL import Image
 import io
+import streamlit.components.v1 as components
 
 # Configuración de la página
 st.set_page_config(
@@ -29,7 +30,7 @@ def image_to_base64(image_file):
     img = Image.open(image_file)
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
-    img.thumbnail((1600, 1200)) # Redimensionar para optimizar espacio
+    img.thumbnail((1600, 1200)) # Redimensionar para optimizar
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode()
@@ -62,9 +63,143 @@ def guardar_datos(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
+# Componente HTML/JS para el carrusel interactivo en formato panorámico 2.4:1
+def render_carrusel(imagenes, height=520):
+    imgs_json = json.dumps(imagenes)
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; }}
+      .carousel-container {{
+        position: relative;
+        width: 100%;
+        max-width: 1100px;
+        aspect-ratio: 2.4 / 1;
+        margin: 0 auto;
+        background: #15181e;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #2a2d34;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        user-select: none;
+      }}
+      .img-wrapper {{
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+      }}
+      .img-wrapper img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }}
+      .click-zone {{
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        transition: background 0.2s;
+      }}
+      .click-zone-left {{
+        left: 0;
+        justify-content: flex-start;
+        padding-left: 20px;
+      }}
+      .click-zone-right {{
+        right: 0;
+        justify-content: flex-end;
+        padding-right: 20px;
+      }}
+      .arrow-btn {{
+        background: rgba(15, 17, 21, 0.75);
+        color: #c5a880;
+        font-size: 24px;
+        font-weight: bold;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #c5a880;
+        opacity: 0.7;
+        transition: all 0.2s ease;
+      }}
+      .click-zone:hover .arrow-btn {{
+        opacity: 1;
+        transform: scale(1.1);
+        background: rgba(197, 168, 128, 0.9);
+        color: #0f1115;
+      }}
+      .counter-badge {{
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 17, 21, 0.85);
+        color: #c5a880;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid #c5a880;
+        letter-spacing: 0.5px;
+      }}
+    </style>
+    </head>
+    <body>
+      <div class="carousel-container">
+        <div class="img-wrapper">
+          <img id="slide" src="" alt="Galería">
+        </div>
+        <!-- Clic Izquierda: Retroceder -->
+        <div class="click-zone click-zone-left" onclick="prevSlide()" title="Foto anterior">
+          <div class="arrow-btn">&#10094;</div>
+        </div>
+        <!-- Clic Derecha: Avanzar -->
+        <div class="click-zone click-zone-right" onclick="nextSlide()" title="Siguiente foto">
+          <div class="arrow-btn">&#10095;</div>
+        </div>
+        <div id="badge" class="counter-badge">1/1</div>
+      </div>
+
+      <script>
+        const photos = {imgs_json};
+        let current = 0;
+
+        function render() {{
+          document.getElementById('slide').src = "data:image/jpeg;base64," + photos[current];
+          document.getElementById('badge').innerText = (current + 1) + "/" + photos.length;
+        }}
+
+        function nextSlide() {{
+          current = (current + 1) % photos.length;
+          render();
+        }}
+
+        function prevSlide() {{
+          current = (current - 1 + photos.length) % photos.length;
+          render();
+        }}
+
+        render();
+      </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=height)
+
 db = cargar_datos()
 
-# Selector lateral: Vista Cliente vs Panel Admin
+# Selector lateral
 st.sidebar.title("🚪 Acceso")
 modo = st.sidebar.radio("Navegación", ["Vista Cliente", "Panel de Administración"])
 
@@ -94,14 +229,18 @@ if modo == "Vista Cliente":
             st.header(titulo)
             st.caption(f"📍 {prop_data['ubicacion']}")
 
-            # GALERÍA DE FOTOS
+            # FOTOGRAFÍAS (Imagen Principal + Carrusel)
             imagenes = prop_data.get("imagenes", [])
             if imagenes:
-                st.subheader("Galería de Imágenes" if is_es else "Photo Gallery")
-                cols = st.columns(2)
-                for idx, img_b64 in enumerate(imagenes):
-                    img_bytes = base64.b64decode(img_b64)
-                    cols[idx % 2].image(img_bytes, use_container_width=True)
+                st.subheader("⭐ Foto Principal" if is_es else "⭐ Main Featured Photo")
+                img_principal = base64.b64decode(imagenes[0])
+                st.image(img_principal, use_container_width=True)
+
+                if len(imagenes) > 1:
+                    st.markdown("---")
+                    st.subheader("📸 Galería Completa" if is_es else "📸 Full Photo Gallery")
+                    st.caption("💡 Haz clic a la **derecha** de la imagen para avanzar o a la **izquierda** para retroceder." if is_es else "💡 Click on the **right** of the image to advance or **left** to go back.")
+                    render_carrusel(imagenes)
             else:
                 st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
 
@@ -128,7 +267,7 @@ if modo == "Vista Cliente":
             st.markdown("---")
             st.link_button(
                 "💬 Contactar por WhatsApp" if is_es else "💬 Contact via WhatsApp",
-                "https://wa.me/34000000000"
+                "https://wa.me/34637128212"
             )
         elif pass_input != "":
             st.error("Contraseña incorrecta." if is_es else "Incorrect password.")
@@ -161,11 +300,20 @@ elif modo == "Panel de Administración":
                     p_data["imagenes"] = []
                 
                 if p_data["imagenes"]:
-                    st.write("Fotos actuales:")
+                    st.write("Fotos actuales (la número 1 es la **Foto Principal**):")
                     grid_cols = st.columns(4)
                     for i, img_b64 in enumerate(p_data["imagenes"]):
                         img_bytes = base64.b64decode(img_b64)
                         grid_cols[i % 4].image(img_bytes, use_container_width=True)
+                        
+                        if i == 0:
+                            grid_cols[i % 4].info("⭐ Principal")
+                        else:
+                            if grid_cols[i % 4].button(f"⭐ Fijar como 1ª", key=f"main_{prop_edit}_{i}"):
+                                p_data["imagenes"].insert(0, p_data["imagenes"].pop(i))
+                                guardar_datos(db)
+                                st.rerun()
+
                         if grid_cols[i % 4].button(f"🗑️ Eliminar #{i+1}", key=f"del_{prop_edit}_{i}"):
                             p_data["imagenes"].pop(i)
                             guardar_datos(db)
