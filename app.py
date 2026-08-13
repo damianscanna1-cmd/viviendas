@@ -169,7 +169,8 @@ elif modo == "Panel de Administración":
                     grid_cols = st.columns(4)
                     for i, img_b64 in enumerate(p_data["imagenes"]):
                         img_bytes = base64.b64decode(img_b64)
-                        grid_cols[i % 4].image(img_bytes, use_column_width=True)
+                        if img_bytes:
+    grid_cols[i % 4].image(img_bytes, use_container_width=True)
                         if grid_cols[i % 4].button(f"🗑️ Eliminar #{i+1}", key=f"del_{prop_edit}_{i}"):
                             p_data["imagenes"].pop(i)
                             guardar_datos(db)
