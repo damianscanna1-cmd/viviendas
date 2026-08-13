@@ -1,8 +1,11 @@
 import streamlit as st
 import json
 import os
+import base64
+from PIL import Image
+import io
 
-# Configuración de página
+# Configuración de la página
 st.set_page_config(
     page_title="Dossier Inmobiliario Privado",
     page_icon="🏠",
@@ -19,8 +22,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Archivo de base de datos local (JSON)
 DATA_FILE = "propiedades.json"
+
+# Función para convertir imágenes subidas a Base64 para guardarlas en el JSON
+def image_to_base64(image_file):
+    img = Image.open(image_file)
+    # Convertir a RGB en caso de ser PNG con transparencia
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    # Redimensionar si es muy grande para optimizar espacio y carga
+    img.thumbnail((1600, 1200))
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG", quality=85)
+    return base64.b64encode(buffered.getvalue()).decode()
 
 def cargar_datos():
     if os.path.exists(DATA_FILE):
@@ -36,8 +50,8 @@ def cargar_datos():
                 "superficie": "180 m²",
                 "habitaciones": "3",
                 "banos": "2",
-                "descripcion_es": "Exclusiva vivienda reformada con acabados de primera calidad...",
-                "descripcion_en": "Exclusive fully renovated property with top-quality finishes...",
+                "descripcion_es": "Exclusiva vivienda reformada con acabados de primera calidad, diseño minimalista e iluminación natural óptima en todas sus estancias.",
+                "descripcion_en": "Exclusive fully renovated property with top-quality finishes, minimalist design, and optimal natural light throughout.",
                 "video_url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
                 "password_cliente": "Cliente2026",
                 "imagenes": []
@@ -61,7 +75,6 @@ modo = st.sidebar.radio("Navegación", ["Vista Cliente", "Panel de Administraci�
 # ==========================================
 if modo == "Vista Cliente":
     st.sidebar.markdown("---")
-    # Selector de Idioma
     lang = st.sidebar.selectbox("🌐 Idioma / Language", ["Español 🇪🇸", "English 🇬🇧"])
     is_es = "Español" in lang
 
@@ -72,7 +85,6 @@ if modo == "Vista Cliente":
 
         st.title("🔒 Dossier Inmobiliario Privado")
         
-        # Verificación de contraseña de cliente
         pass_input = st.text_input("Introduce la contraseña para ver la propiedad:", type="password")
 
         if pass_input == prop_data["password_cliente"]:
@@ -84,7 +96,21 @@ if modo == "Vista Cliente":
             st.header(titulo)
             st.caption(f"📍 {prop_data['ubicacion']}")
 
-            # KPIs principales
+            # GALERÍA DE FOTOS
+            imagenes = prop_data.get("imagenes", [])
+            if imagenes:
+                st.subheader("Galería de Imágenes" if is_es else "Photo Gallery")
+                # Mostrar en cuadrícula de 2 columnas
+                cols = st.columns(2)
+                for idx, img_b64 in enumerate(imagenes):
+                    img_bytes = base64.b64decode(img_b64)
+                    cols[idx % 2].image(img_bytes, use_column_width=True)
+            else:
+                st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
+
+            st.markdown("---")
+
+            # KPIs
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Superficie / Area", prop_data["superficie"])
             col2.metric("Habitaciones / Beds", prop_data["habitaciones"])
@@ -131,7 +157,45 @@ elif modo == "Panel de Administración":
                 prop_edit = st.selectbox("Seleccionar Inmueble para Modificar:", prop_keys)
                 p_data = db["propiedades"][prop_edit]
 
+                # --- SECCIÓN DE FOTOS ---
+                st.subheader("📸 Gestión de Fotografías")
+                
+                # Mostrar fotos actuales con opción de borrar
+                if "imagenes" not in p_data:
+                    p_data["imagenes"] = []
+                
+                if p_data["imagenes"]:
+                    st.write("Fotos actuales:")
+                    grid_cols = st.columns(4)
+                    for i, img_b64 in enumerate(p_data["imagenes"]):
+                        img_bytes = base64.b64decode(img_b64)
+                        grid_cols[i % 4].image(img_bytes, use_column_width=True)
+                        if grid_cols[i % 4].button(f"🗑️ Eliminar #{i+1}", key=f"del_{prop_edit}_{i}"):
+                            p_data["imagenes"].pop(i)
+                            guardar_datos(db)
+                            st.rerun()
+
+                # Subir fotos nuevas
+                nuevas_fotos = st.file_uploader(
+                    "Añadir nuevas imágenes (JPG, PNG, WEBP)", 
+                    type=["jpg", "jpeg", "png", "webp"], 
+                    accept_multiple_files=True
+                )
+                
+                if nuevas_fotos:
+                    if st.button("⬆️ Subir e Integrar Fotos"):
+                        for f in nuevas_fotos:
+                            b64_str = image_to_base64(f)
+                            p_data["imagenes"].append(b64_str)
+                        guardar_datos(db)
+                        st.success(f"¡{len(nuevas_fotos)} fotos añadidas correctamente!")
+                        st.rerun()
+
+                st.markdown("---")
+
+                # --- FORMULARIO DE TEXTOS Y DATOS ---
                 with st.form("edit_form"):
+                    st.subheader("📝 Datos del Inmueble")
                     col_a, col_b = st.columns(2)
                     p_data["titulo_es"] = col_a.text_input("Título (ES)", p_data["titulo_es"])
                     p_data["titulo_en"] = col_b.text_input("Título (EN)", p_data["titulo_en"])
@@ -143,7 +207,6 @@ elif modo == "Panel de Administración":
                     p_data["habitaciones"] = col_b.text_input("Habitaciones", p_data["habitaciones"])
                     p_data["banos"] = col_a.text_input("Baños", p_data["banos"])
                     
-                    # Contraseña exclusiva del cliente para este inmueble
                     p_data["password_cliente"] = col_b.text_input("Contraseña para el Cliente", p_data["password_cliente"])
 
                     p_data["descripcion_es"] = st.text_area("Descripción (ES)", p_data["descripcion_es"])
@@ -151,11 +214,32 @@ elif modo == "Panel de Administración":
 
                     p_data["video_url"] = st.text_input("URL del Vídeo (YouTube/Vimeo/MP4)", p_data.get("video_url", ""))
 
-                    submitted = st.form_submit_button("💾 Guardar Cambios")
+                    submitted = st.form_submit_button("💾 Guardar Datos y Textos")
                     if submitted:
                         guardar_datos(db)
-                        st.toast("¡Propiedad actualizada correctamente!")
+                        st.toast("¡Datos del inmueble guardados!")
 
         with tab2:
-            st.subheader("Añadir Inmueble al Portafolio")
-            # Lógica para registrar nuevas claves e inmuebles...
+            st.subheader("Añadir Nueva Propiedad al Portafolio")
+            new_id = st.text_input("Identificador único (ej: piso-gran-via, atico-patacona)")
+            if st.button("Crear Inmueble"):
+                if new_id and new_id not in db["propiedades"]:
+                    db["propiedades"][new_id] = {
+                        "titulo_es": "Nueva Propiedad",
+                        "titulo_en": "New Property",
+                        "ubicacion": "Valencia, España",
+                        "precio": "0 €",
+                        "superficie": "0 m²",
+                        "habitaciones": "0",
+                        "banos": "0",
+                        "descripcion_es": "Descripción...",
+                        "descripcion_en": "Description...",
+                        "video_url": "",
+                        "password_cliente": "1234",
+                        "imagenes": []
+                    }
+                    guardar_datos(db)
+                    st.success(f"Propiedad '{new_id}' creada. Ahora puedes editarla en la pestaña 'Editar Propiedad'.")
+                    st.rerun()
+                elif new_id in db["propiedades"]:
+                    st.error("Ese identificador ya existe.")
