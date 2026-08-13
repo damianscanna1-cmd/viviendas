@@ -63,18 +63,18 @@ def guardar_datos(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# Galería Unificada (Foto Principal + Carrusel + Ampliación Fullscreen)
+# Galería Unificada con Ampliación a Pantalla Completa Real
 def render_galeria(imagenes, is_es=True, height=580):
     imgs_json = json.dumps(imagenes)
     expand_txt = "🔍 Ampliar Foto" if is_es else "🔍 Enlarge Photo"
-    close_txt = "Cerrar [ESC]" if is_es else "Close [ESC]"
+    close_txt = "✖ Cerrar [ESC]" if is_es else "✖ Close [ESC]"
     
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; }}
+      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; overflow: hidden; }}
       
       /* Visor Principal Panorámico 2.4:1 */
       .gallery-container {{
@@ -147,7 +147,7 @@ def render_galeria(imagenes, is_es=True, height=580):
         color: #0f1115;
       }}
 
-      /* Barra de Controles Inferior */
+      /* Barra Inferior */
       .bottom-bar {{
         position: absolute;
         bottom: 16px;
@@ -172,9 +172,9 @@ def render_galeria(imagenes, is_es=True, height=580):
       }}
       .expand-btn {{
         pointer-events: auto;
-        background: rgba(197, 168, 128, 0.9);
+        background: rgba(197, 168, 128, 0.95);
         color: #0f1115;
-        padding: 6px 16px;
+        padding: 6px 18px;
         border-radius: 20px;
         font-size: 13px;
         font-weight: 700;
@@ -189,7 +189,7 @@ def render_galeria(imagenes, is_es=True, height=580):
         transform: scale(1.05);
       }}
 
-      /* MODAL FULLSCREEN (Visor de Ampliación) */
+      /* MODAL PANTALLA COMPLETA TOTAL (TRUE FULLSCREEN) */
       .modal-overlay {{
         display: none;
         position: fixed;
@@ -197,22 +197,18 @@ def render_galeria(imagenes, is_es=True, height=580):
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0, 0, 0, 0.94);
-        backdrop-filter: blur(8px);
-        z-index: 9999;
+        background: #000000;
+        z-index: 999999;
         justify-content: center;
         align-items: center;
-        flex-direction: column;
       }}
       .modal-overlay.active {{
         display: flex;
       }}
       .modal-img {{
-        max-width: 92vw;
-        max-height: 82vh;
+        width: 100vw;
+        height: 100vh;
         object-fit: contain;
-        border-radius: 8px;
-        box-shadow: 0 0 35px rgba(0,0,0,0.9);
       }}
       .modal-close {{
         position: absolute;
@@ -221,11 +217,13 @@ def render_galeria(imagenes, is_es=True, height=580):
         background: rgba(197, 168, 128, 0.9);
         color: #0f1115;
         border: none;
-        padding: 8px 18px;
-        border-radius: 20px;
+        padding: 10px 22px;
+        border-radius: 25px;
         font-weight: bold;
         font-size: 14px;
         cursor: pointer;
+        z-index: 1000000;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         transition: all 0.2s;
       }}
       .modal-close:hover {{
@@ -235,17 +233,18 @@ def render_galeria(imagenes, is_es=True, height=580):
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        background: rgba(15, 17, 21, 0.8);
+        background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
         border: 1px solid #c5a880;
-        width: 50px;
-        height: 50px;
+        width: 60px;
+        height: 60px;
         border-radius: 50%;
-        font-size: 26px;
+        font-size: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        z-index: 1000000;
         transition: all 0.2s;
       }}
       .modal-nav:hover {{
@@ -254,18 +253,26 @@ def render_galeria(imagenes, is_es=True, height=580):
       }}
       .modal-prev {{ left: 30px; }}
       .modal-next {{ right: 30px; }}
-      .modal-counter {{
-        margin-top: 15px;
+      .modal-badge-container {{
+        position: absolute;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
-        font-size: 15px;
-        font-weight: 600;
+        padding: 8px 22px;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: bold;
+        border: 1px solid #c5a880;
+        z-index: 1000000;
       }}
     </style>
     </head>
     <body>
       <div class="gallery-container">
         <div class="img-wrapper">
-          <img id="slide" src="" alt="Galería" onclick="openModal()" style="cursor: zoom-in;" title="Haz clic para ampliar">
+          <img id="slide" src="" alt="Galería" onclick="openModal()" style="cursor: zoom-in;" title="Haz clic para pantalla completa">
         </div>
         
         <!-- Flecha Izquierda -->
@@ -285,13 +292,13 @@ def render_galeria(imagenes, is_es=True, height=580):
         </div>
       </div>
 
-      <!-- MODAL FULLSCREEN -->
+      <!-- MODAL FULLSCREEN COMPLETO -->
       <div id="modal" class="modal-overlay">
         <button class="modal-close" onclick="closeModal()">{close_txt}</button>
         <div class="modal-nav modal-prev" onclick="prevSlide(event)">&#10094;</div>
-        <img id="modal-slide" class="modal-img" src="" alt="Ampliación">
+        <img id="modal-slide" class="modal-img" src="" alt="Pantalla Completa">
         <div class="modal-nav modal-next" onclick="nextSlide(event)">&#10095;</div>
-        <div id="modal-badge" class="modal-counter">1/1</div>
+        <div id="modal-badge" class="modal-badge-container">1/1</div>
       </div>
 
       <script>
@@ -321,17 +328,33 @@ def render_galeria(imagenes, is_es=True, height=580):
         }}
 
         function openModal() {{
-          document.getElementById('modal').classList.add('active');
+          const modal = document.getElementById('modal');
+          modal.classList.add('active');
+          if (modal.requestFullscreen) {{
+            modal.requestFullscreen().catch(err => {{}});
+          }} else if (modal.webkitRequestFullscreen) {{
+            modal.webkitRequestFullscreen();
+          }}
         }}
 
         function closeModal() {{
-          document.getElementById('modal').classList.remove('active');
+          const modal = document.getElementById('modal');
+          modal.classList.remove('active');
+          if (document.fullscreenElement) {{
+            document.exitFullscreen().catch(err => {{}});
+          }}
         }}
 
         document.addEventListener('keydown', function(e) {{
           if (e.key === 'Escape') closeModal();
           if (e.key === 'ArrowRight') nextSlide();
           if (e.key === 'ArrowLeft') prevSlide();
+        }});
+
+        document.addEventListener('fullscreenchange', function() {{
+          if (!document.fullscreenElement) {{
+            document.getElementById('modal').classList.remove('active');
+          }}
         }});
 
         render();
@@ -373,11 +396,11 @@ if modo == "Vista Cliente":
             st.header(titulo)
             st.caption(f"📍 {prop_data['ubicacion']}")
 
-            # FOTOGRAFÍAS (Galería Unificada)
+            # FOTOGRAFÍAS (Galería Unificada con Fullscreen total)
             imagenes = prop_data.get("imagenes", [])
             if imagenes:
                 st.subheader("📸 Galería de Fotografías" if is_es else "📸 Photo Gallery")
-                st.caption("💡 Haz clic a la **derecha/izquierda** para navegar, o pulsa en **🔍 Ampliar Foto** (o sobre la imagen) para ver en pantalla completa." if is_es else "💡 Click **left/right** to navigate, or press **🔍 Enlarge Photo** (or image) for full screen.")
+                st.caption("💡 Pulsa en **🔍 Ampliar Foto** (o sobre la imagen) para ver a pantalla completa. Usa las flechas o el teclado para navegar." if is_es else "💡 Press **🔍 Enlarge Photo** (or image) for full screen view. Use arrows or keyboard to navigate.")
                 render_galeria(imagenes, is_es=is_es)
             else:
                 st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
