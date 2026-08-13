@@ -101,7 +101,7 @@ if modo == "Vista Cliente":
                 cols = st.columns(2)
                 for idx, img_b64 in enumerate(imagenes):
                     img_bytes = base64.b64decode(img_b64)
-                    cols[idx % 2].image(img_bytes, use_column_width=True)
+                    cols[idx % 2].image(img_bytes, use_container_width=True)
             else:
                 st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
 
@@ -165,7 +165,7 @@ elif modo == "Panel de Administración":
                     grid_cols = st.columns(4)
                     for i, img_b64 in enumerate(p_data["imagenes"]):
                         img_bytes = base64.b64decode(img_b64)
-                        grid_cols[i % 4].image(img_bytes, use_column_width=True)
+                        grid_cols[i % 4].image(img_bytes, use_container_width=True)
                         if grid_cols[i % 4].button(f"🗑️ Eliminar #{i+1}", key=f"del_{prop_edit}_{i}"):
                             p_data["imagenes"].pop(i)
                             guardar_datos(db)
@@ -199,7 +199,7 @@ elif modo == "Panel de Administración":
                     p_data["ubicacion"] = col_b.text_input("Ubicación", p_data["ubicacion"])
 
                     p_data["superficie"] = col_a.text_input("Superficie", p_data["superficie"])
-                    p_data["habitaciones"] = col_b.text_input("Habitaciones", p_data["habitaciones"])
+                    p_data["habitaciones"] = col_a.text_input("Habitaciones", p_data["habitaciones"])
                     p_data["banos"] = col_a.text_input("Baños", p_data["banos"])
                     
                     p_data["password_cliente"] = col_b.text_input("Contraseña para el Cliente", p_data["password_cliente"])
