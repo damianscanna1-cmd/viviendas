@@ -16,65 +16,64 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown(f"""
+st.markdown("""
     <style>
     /* Ocultamiento estricto y bloqueo absoluto de elementos flotantes, badges y toolbar */
     #MainMenu, header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], 
-    [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stAppDeployButton {{
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stAppDeployButton {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
         height: 0px !important;
         max-height: 0px !important;
-    }}
+    }
     
     div[class*="viewerBadge"], 
     div[class*="stActionButton"], 
     div[class*="viewerBadge_container"],
-    iframe[src*="streamlit"] {{
+    iframe[src*="streamlit"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
         z-index: -999999 !important;
-    }}
+    }
     
-    html, body, .stApp {{
+    html, body, .stApp {
         background-color: #0f1115;
         color: #f3f4f6;
         max-width: 100vw;
         overflow-x: hidden !important;
-    }}
+    }
     
-    .main {{ 
+    .main { 
         background-color: #0f1115; 
         color: #f3f4f6;
         padding-top: 1rem !important;
-    }}
+    }
 
-    h1, h2, h3 {{ color: #c5a880 !important; }}
+    h1, h2, h3 { color: #c5a880 !important; }
     
     /* Botones estándar de la aplicación */
-    .stButton>button {{ 
+    .stButton>button { 
         background-color: #c5a880; 
         color: #0f1115; 
         font-weight: bold; 
         border-radius: 8px; 
         width: 100%;
-    }}
+    }
 
-    /* Botón específico de enlace a WhatsApp en color verde corporativo */
-    a[href*="wa.me"] div[data-testid="stMarkdownContainer"] p,
-    a[href*="wa.me"] {{
-        background-color: #25D366 !important;
-        color: #ffffff !important;
-        border-radius: 8px !important;
-        font-weight: bold !important;
-    }}
-    
-    /* Forzar estilo del link_button de WhatsApp */
-    div.stLinkButton > a {{
+    /* Unificar colores de métricas (m², hab, baños, precio) para evitar cambios según navegador */
+    [data-testid="stMetricValue"], [data-testid="stMetricLabel"], [data-testid="stMetricDelta"] {
+        color: #f3f4f6 !important;
+    }
+    [data-testid="stMetricValue"] {
+        color: #c5a880 !important;
+    }
+
+    /* Forzar estilo del link_button de WhatsApp en color verde corporativo */
+    div.stLinkButton > a {
         background-color: #25D366 !important;
         color: #ffffff !important;
         font-weight: bold !important;
@@ -82,11 +81,11 @@ st.markdown(f"""
         border: none !important;
         width: 100% !important;
         text-align: center !important;
-    }}
-    div.stLinkButton > a:hover {{
+    }
+    div.stLinkButton > a:hover {
         background-color: #22bf5b !important;
         color: #ffffff !important;
-    }}
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -108,7 +107,18 @@ def image_to_base64(image_file):
 def cargar_datos():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # Asegurar compatibilidad si propiedades antiguas no tienen "usuarios"
+            for prop_id, prop_info in data["propiedades"].items():
+                if "usuarios" not in prop_info:
+                    old_pass = prop_info.get("password_cliente", "Cliente2026")
+                    prop_info["usuarios"] = {
+                        "cliente_principal": {"password": old_pass, "visitas": 0}
+                    }
+                    if "password_cliente" in prop_info:
+                        del prop_info["password_cliente"]
+            return data
+            
     return {
         "propiedades": {
             "vivienda-01": {
@@ -122,7 +132,9 @@ def cargar_datos():
                 "descripcion_es": "Exclusiva vivienda reformada con acabados de primera calidad, diseño minimalista e iluminación natural óptima en todas sus estancias.",
                 "descripcion_en": "Exclusive fully renovated property with top-quality finishes, minimalist design, and optimal natural light throughout.",
                 "video_url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
-                "password_cliente": "Cliente2026",
+                "usuarios": {
+                    "cliente_principal": {"password": "Cliente2026", "visitas": 0}
+                },
                 "imagenes": []
             }
         },
@@ -256,6 +268,12 @@ def render_galeria(imagenes, is_es=True, height=480):
     components.html(html_code, height=height)
 
 # -----------------------------------------------------------------------------
+# CONTROL DE SESIÓN PARA CLIENTE
+# -----------------------------------------------------------------------------
+if 'auth_client_user' not in st.session_state:
+    st.session_state.auth_client_user = None
+
+# -----------------------------------------------------------------------------
 # APLICACIÓN PRINCIPAL CON SEGURIDAD ESTRICTA
 # -----------------------------------------------------------------------------
 st.sidebar.title("🚪 Navegación")
@@ -272,63 +290,82 @@ if modo == "Vista Cliente":
         prop_data = db["propiedades"][prop_sel]
 
         st.title("🔒 Dossier Inmobiliario Privado")
-        pass_input = st.text_input("Introduce la contraseña para ver la propiedad:", type="password")
+        
+        # Selección de usuario e ingreso de contraseña asignada
+        usuarios_dict = prop_data.get("usuarios", {})
+        user_names = list(usuarios_dict.keys())
+        
+        if user_names:
+            selected_user = st.selectbox("Selecciona tu usuario / Select your user:", user_names)
+            pass_input = st.text_input("Introduce tu contraseña:", type="password")
 
-        if pass_input == prop_data["password_cliente"]:
-            st.success("Acceso autorizado" if is_es else "Access granted")
-            st.markdown("---")
+            if st.button("Iniciar Sesión"):
+                if pass_input == usuarios_dict[selected_user]["password"]:
+                    # Incrementar contador de visitas de este usuario específico
+                    usuarios_dict[selected_user]["visitas"] += 1
+                    guardar_datos(db)
+                    st.session_state.auth_client_user = selected_user
+                    st.success("Acceso autorizado correctamente")
+                    st.rerun()
+                else:
+                    st.error("Contraseña incorrecta para este usuario.")
 
-            titulo = prop_data["titulo_es"] if is_es else prop_data["titulo_en"]
-            st.header(titulo)
-            st.caption(f"📍 {prop_data['ubicacion']}")
+            # Mostrar contenido si el usuario actual está autenticado
+            if st.session_state.auth_client_user == selected_user:
+                st.success(f"Sesión activa para: **{selected_user}**")
+                st.markdown("---")
 
-            imagenes = prop_data.get("imagenes", [])
-            if imagenes:
-                st.subheader("📸 Galería de Fotografías" if is_es else "📸 Photo Gallery")
-                render_galeria(imagenes, is_es=is_es)
-            else:
-                st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
+                titulo = prop_data["titulo_es"] if is_es else prop_data["titulo_en"]
+                st.header(titulo)
+                st.caption(f"📍 {prop_data['ubicacion']}")
 
-            if prop_data.get("video_url"):
-                st.subheader("Recorrido en Vídeo" if is_es else "Video Tour")
-                st.video(prop_data["video_url"])
+                imagenes = prop_data.get("imagenes", [])
+                if imagenes:
+                    st.subheader("📸 Galería de Fotografías" if is_es else "📸 Photo Gallery")
+                    render_galeria(imagenes, is_es=is_es)
+                else:
+                    st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
 
-            st.markdown("---")
+                if prop_data.get("video_url"):
+                    st.subheader("Recorrido en Vídeo" if is_es else "Video Tour")
+                    st.video(prop_data["video_url"])
 
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Superficie / Area", prop_data["superficie"])
-            col2.metric("Habitaciones / Beds", prop_data["habitaciones"])
-            col3.metric("Baños / Baths", prop_data["banos"])
-            col4.metric("Precio / Price", prop_data["precio"])
+                st.markdown("---")
 
-            st.subheader("Descripción" if is_es else "Description")
-            desc = prop_data["descripcion_es"] if is_es else prop_data["descripcion_en"]
-            st.write(desc)
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Superficie / Area", prop_data["superficie"])
+                col2.metric("Habitaciones / Beds", prop_data["habitaciones"])
+                col3.metric("Baños / Baths", prop_data["banos"])
+                col4.metric("Precio / Price", prop_data["precio"])
 
-            st.markdown("---")
-            st.link_button(
-                "💬 Contactar por WhatsApp" if is_es else "💬 Contact via WhatsApp",
-                f"https://wa.me/{WHATSAPP_NUMBER}"
-            )
-        elif pass_input != "":
-            st.error("Contraseña incorrecta." if is_es else "Incorrect password.")
+                st.subheader("Descripción" if is_es else "Description")
+                desc = prop_data["descripcion_es"] if is_es else prop_data["descripcion_en"]
+                st.write(desc)
+
+                st.markdown("---")
+                st.link_button(
+                    "💬 Contactar por WhatsApp" if is_es else "💬 Contact via WhatsApp",
+                    f"https://wa.me/{WHATSAPP_NUMBER}"
+                )
+        else:
+            st.warning("No hay usuarios configurados para esta propiedad.")
     else:
         st.info("No hay propiedades disponibles.")
 
 elif modo == "Panel de Administración (Crear/Editar)":
     st.title("🛠️ Panel de Control - Administración")
     
-    admin_pass = st.text_input("Contraseña exclusiva de Administrador (para Crear y Editar):", type="password")
+    admin_pass = st.text_input("Contraseña exclusiva de Administrador:", type="password")
     
     if admin_pass == db["admin_password"]:
-        st.success("Sesión de administrador activa. Funciones de creación y edición desbloqueadas.")
+        st.success("Sesión de administrador activa.")
         
-        tab1, tab2 = st.tabs(["Editar Propiedad", "Crear Nueva Propiedad"])
+        tab1, tab2, tab3 = st.tabs(["Editar Propiedad", "Control de Usuarios y Visitas", "Crear Nueva Propiedad"])
 
         with tab1:
             prop_keys = list(db["propiedades"].keys())
             if prop_keys:
-                prop_edit = st.selectbox("Seleccionar Inmueble para Modificar:", prop_keys)
+                prop_edit = st.selectbox("Seleccionar Inmueble para Modificar:", prop_keys, key="edit_prop_select")
                 p_data = db["propiedades"][prop_edit]
 
                 st.subheader("📸 Gestión de Fotografías")
@@ -336,7 +373,6 @@ elif modo == "Panel de Administración (Crear/Editar)":
                     p_data["imagenes"] = []
                 
                 if p_data["imagenes"]:
-                    st.write("Fotos actuales (la número 1 es la **Foto Principal**):")
                     grid_cols = st.columns(4)
                     for i, img_b64 in enumerate(p_data["imagenes"]):
                         img_bytes = base64.b64decode(img_b64)
@@ -384,8 +420,6 @@ elif modo == "Panel de Administración (Crear/Editar)":
                     p_data["superficie"] = col_a.text_input("Superficie", p_data["superficie"])
                     p_data["habitaciones"] = col_a.text_input("Habitaciones", p_data["habitaciones"])
                     p_data["banos"] = col_b.text_input("Baños", p_data["banos"])
-                    
-                    p_data["password_cliente"] = col_b.text_input("Contraseña para el Cliente", p_data["password_cliente"])
 
                     p_data["descripcion_es"] = st.text_area("Descripción (ES)", p_data["descripcion_es"])
                     p_data["descripcion_en"] = st.text_area("Descripción (EN)", p_data["descripcion_en"])
@@ -398,6 +432,50 @@ elif modo == "Panel de Administración (Crear/Editar)":
                         st.toast("¡Datos del inmueble guardados!")
 
         with tab2:
+            st.subheader("👥 Gestión de Contraseñas de Usuario y Contador de Visitas")
+            prop_users_key = st.selectbox("Seleccionar Inmueble para ver usuarios:", list(db["propiedades"].keys()), key="users_prop_select")
+            u_data = db["propiedades"][prop_users_key]
+
+            if "usuarios" not in u_data:
+                u_data["usuarios"] = {}
+
+            st.write("### Usuarios Actuales y Visitas Registradas")
+            if u_data["usuarios"]:
+                for u_name, u_info in list(u_data["usuarios"].items()):
+                    with st.expander(f"👤 {u_name} — 👁️ {u_info['visitas']} visitas"):
+                        nueva_contra = st.text_input(f"Cambiar contraseña para '{u_name}':", value=u_info["password"], type="password", key=f"pass_{prop_users_key}_{u_name}")
+                        col_u1, col_u2 = st.columns(2)
+                        if col_u1.button(f"Actualizar Clave", key=f"save_{prop_users_key}_{u_name}"):
+                            u_data["usuarios"][u_name]["password"] = nueva_contra
+                            guardar_datos(db)
+                            st.success(f"Contraseña actualizada para {u_name}.")
+                            st.rerun()
+                        if col_u2.button(f"🗑️ Eliminar Usuario", key=f"del_u_{prop_users_key}_{u_name}"):
+                            del u_data["usuarios"][u_name]
+                            guardar_datos(db)
+                            st.warning(f"Usuario {u_name} eliminado.")
+                            st.rerun()
+            else:
+                st.info("No hay usuarios creados para esta propiedad.")
+
+            st.markdown("---")
+            st.subheader("➕ Añadir Nuevo Usuario a esta Propiedad")
+            nuevo_usuario_nombre = st.text_input("Nombre del Usuario / Cliente:")
+            nuevo_usuario_pass = st.text_input("Contraseña Asignada:", type="password", key="new_user_pass_input")
+
+            if st.button("Crear Usuario y Asignar Clave"):
+                if nuevo_usuario_nombre:
+                    if nuevo_usuario_nombre not in u_data["usuarios"]:
+                        u_data["usuarios"][nuevo_usuario_nombre] = {"password": nuevo_usuario_pass, "visitas": 0}
+                        guardar_datos(db)
+                        st.success(f"Usuario '{nuevo_usuario_nombre}' creado con éxito.")
+                        st.rerun()
+                    else:
+                        st.error("Ese nombre de usuario ya existe en esta propiedad.")
+                else:
+                    st.warning("Introduce un nombre de usuario válido.")
+
+        with tab3:
             st.subheader("Añadir Nueva Propiedad al Portafolio")
             new_id = st.text_input("Identificador único (ej: piso-gran-via, atico-patacona)")
             if st.button("Crear Inmueble"):
@@ -413,7 +491,9 @@ elif modo == "Panel de Administración (Crear/Editar)":
                         "descripcion_es": "Descripción...",
                         "descripcion_en": "Description...",
                         "video_url": "",
-                        "password_cliente": "1234",
+                        "usuarios": {
+                            "cliente_inicial": {"password": "1234", "visitas": 0}
+                        },
                         "imagenes": []
                     }
                     guardar_datos(db)
@@ -422,4 +502,4 @@ elif modo == "Panel de Administración (Crear/Editar)":
                 elif new_id in db["propiedades"]:
                     st.error("Ese identificador ya existe.")
     elif admin_pass != "":
-        st.error("Clave de administrador incorrecta. Acceso denegado a la creación y gestión.")
+        st.error("Clave de administrador incorrecta. Acceso denegado.")
