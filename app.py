@@ -1,3 +1,4 @@
+Python
 import streamlit as st
 import streamlit.components.v1 as components
 import urllib.parse
@@ -303,7 +304,7 @@ def show_admin_view():
     with tabs[2]:
         st.subheader("📦 Descargar Script Fuente (app.py)")
         try:
-            with open(_file_, "r", encoding="utf-8") as f:
+            with open(__file__, "r", encoding="utf-8") as f:
                 code_content = f.read()
             st.download_button(
                 label="⬇️ Descargar app.py",
@@ -329,5 +330,5 @@ def main():
         st.title("🏡 Portal Inmobiliario")
         st.info("Abre la barra lateral para iniciar sesión como Cliente o Administrador.")
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
