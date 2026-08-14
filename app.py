@@ -16,51 +16,77 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
+st.markdown(f"""
     <style>
     /* Ocultamiento estricto y bloqueo absoluto de elementos flotantes, badges y toolbar */
     #MainMenu, header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], 
-    [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stAppDeployButton {
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stAppDeployButton {{
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
         height: 0px !important;
         max-height: 0px !important;
-    }
+    }}
     
     div[class*="viewerBadge"], 
     div[class*="stActionButton"], 
     div[class*="viewerBadge_container"],
-    iframe[src*="streamlit"] {
+    iframe[src*="streamlit"] {{
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
         z-index: -999999 !important;
-    }
+    }}
     
-    html, body, .stApp {
+    html, body, .stApp {{
         background-color: #0f1115;
         color: #f3f4f6;
         max-width: 100vw;
         overflow-x: hidden !important;
-    }
+    }}
     
-    .main { 
+    .main {{ 
         background-color: #0f1115; 
         color: #f3f4f6;
         padding-top: 1rem !important;
-    }
+    }}
 
-    h1, h2, h3 { color: #c5a880 !important; }
-    .stButton>button { 
+    h1, h2, h3 {{ color: #c5a880 !important; }}
+    
+    /* Botones estándar de la aplicación */
+    .stButton>button {{ 
         background-color: #c5a880; 
         color: #0f1115; 
         font-weight: bold; 
         border-radius: 8px; 
         width: 100%;
-    }
+    }}
+
+    /* Botón específico de enlace a WhatsApp en color verde corporativo */
+    a[href*="wa.me"] div[data-testid="stMarkdownContainer"] p,
+    a[href*="wa.me"] {{
+        background-color: #25D366 !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }}
+    
+    /* Forzar estilo del link_button de WhatsApp */
+    div.stLinkButton > a {{
+        background-color: #25D366 !important;
+        color: #ffffff !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        border: none !important;
+        width: 100% !important;
+        text-align: center !important;
+    }}
+    div.stLinkButton > a:hover {{
+        background-color: #22bf5b !important;
+        color: #ffffff !important;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -230,7 +256,7 @@ def render_galeria(imagenes, is_es=True, height=480):
     components.html(html_code, height=height)
 
 # -----------------------------------------------------------------------------
-# APLICACIÓN PRINCIPAL CON SEGURIDAD ESTRICTA (BLOQUEO DE CREACIÓN / ADMIN)
+# APLICACIÓN PRINCIPAL CON SEGURIDAD ESTRICTA
 # -----------------------------------------------------------------------------
 st.sidebar.title("🚪 Navegación")
 modo = st.sidebar.radio("Modo de Acceso", ["Vista Cliente", "Panel de Administración (Crear/Editar)"])
