@@ -7,20 +7,58 @@ import io
 import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
-# CONFIGURACIÓN DE PÁGINA Y ESTILOS
+# CONFIGURACIÓN DE PÁGINA Y ESTILOS (ANTI-SCROLL, OCULTAR MENÚS Y GITHUB)
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Dossier Inmobiliario Privado",
     page_icon="🏠",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 st.markdown("""
     <style>
-    .main { background-color: #0f1115; color: #f3f4f6; }
-    stApp { background-color: #0f1115; }
+    /* Ocultar barra superior, icono de GitHub, opciones de deploy y menú de Streamlit */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display: none !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important; height: 0px !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stStatusWidget"] {visibility: hidden !important;}
+    
+    /* Configuración Global y Anti-Scroll para móviles */
+    html, body, .stApp {
+        background-color: #0f1115;
+        color: #f3f4f6;
+        max-width: 100vw;
+        overflow-x: hidden !important;
+    }
+    
+    .main { 
+        background-color: #0f1115; 
+        color: #f3f4f6;
+        padding-top: 1rem !important;
+    }
+
+    /* Tipografías y botones */
     h1, h2, h3 { color: #c5a880 !important; }
-    .stButton>button { background-color: #c5a880; color: #0f1115; font-weight: bold; border-radius: 8px; }
+    .stButton>button { 
+        background-color: #c5a880; 
+        color: #0f1115; 
+        font-weight: bold; 
+        border-radius: 8px; 
+        width: 100%;
+    }
+    
+    /* Adaptación full width para inputs y contenedores en pantallas móviles */
+    @media (max-width: 768px) {
+        .block-container {
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-top: 0.5rem !important;
+        }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -69,9 +107,9 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA CON PANTALLA COMPLETA REAL (TRUE FULLSCREEN API)
+# COMPONENTE GALERÍA CON PANTALLA COMPLETA REAL Y RESPONSIVE MÓVIL
 # -----------------------------------------------------------------------------
-def render_galeria(imagenes, is_es=True, height=580):
+def render_galeria(imagenes, is_es=True, height=520):
     imgs_json = json.dumps(imagenes)
     expand_txt = "🔍 Ampliar Foto" if is_es else "🔍 Enlarge Photo"
     close_txt = "✖ Cerrar [ESC]" if is_es else "✖ Close [ESC]"
@@ -80,14 +118,15 @@ def render_galeria(imagenes, is_es=True, height=580):
     <!DOCTYPE html>
     <html>
     <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; overflow: hidden; }}
+      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; overflow: hidden; touch-action: pan-y; }}
       
       .gallery-container {{
         position: relative;
         width: 100%;
         max-width: 1100px;
-        aspect-ratio: 2.4 / 1;
+        aspect-ratio: 16 / 9;
         margin: 0 auto;
         background: #15181e;
         border-radius: 12px;
@@ -120,22 +159,22 @@ def render_galeria(imagenes, is_es=True, height=580):
         align-items: center;
         z-index: 2;
       }}
-      .click-zone-left {{ left: 0; justify-content: flex-start; padding-left: 20px; }}
-      .click-zone-right {{ right: 0; justify-content: flex-end; padding-right: 20px; }}
+      .click-zone-left {{ left: 0; justify-content: flex-start; padding-left: 10px; }}
+      .click-zone-right {{ right: 0; justify-content: flex-end; padding-right: 10px; }}
       
       .arrow-btn {{
         background: rgba(15, 17, 21, 0.75);
         color: #c5a880;
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
-        width: 46px;
-        height: 46px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         border: 1px solid #c5a880;
-        opacity: 0.7;
+        opacity: 0.8;
         transition: all 0.2s ease;
       }}
       .click-zone:hover .arrow-btn {{
@@ -147,21 +186,21 @@ def render_galeria(imagenes, is_es=True, height=580):
 
       .bottom-bar {{
         position: absolute;
-        bottom: 16px;
+        bottom: 12px;
         left: 0; right: 0;
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         z-index: 3;
         pointer-events: none;
       }}
       .counter-badge {{
         background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
-        padding: 6px 18px;
+        padding: 5px 14px;
         border-radius: 20px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         border: 1px solid #c5a880;
       }}
@@ -169,18 +208,17 @@ def render_galeria(imagenes, is_es=True, height=580):
         pointer-events: auto;
         background: rgba(197, 168, 128, 0.95);
         color: #0f1115;
-        padding: 6px 18px;
+        padding: 5px 14px;
         border-radius: 20px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
         border: 1px solid #c5a880;
         cursor: pointer;
         transition: all 0.2s ease;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       }}
-      .expand-btn:hover {{ background: #ffffff; color: #0f1115; transform: scale(1.05); }}
 
-      /* MODAL FULLSCREEN VERDADERO */
+      /* MODAL FULLSCREEN */
       .modal-overlay {{
         display: none;
         position: fixed;
@@ -195,19 +233,17 @@ def render_galeria(imagenes, is_es=True, height=580):
       .modal-img {{ width: 100vw; height: 100vh; object-fit: contain; }}
       .modal-close {{
         position: absolute;
-        top: 20px; right: 25px;
+        top: 15px; right: 15px;
         background: rgba(197, 168, 128, 0.9);
         color: #0f1115;
         border: none;
-        padding: 10px 22px;
-        border-radius: 25px;
+        padding: 8px 18px;
+        border-radius: 20px;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 13px;
         cursor: pointer;
         z-index: 1000000;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
       }}
-      .modal-close:hover {{ background: #fff; }}
       .modal-nav {{
         position: absolute;
         top: 50%;
@@ -215,27 +251,26 @@ def render_galeria(imagenes, is_es=True, height=580):
         background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
         border: 1px solid #c5a880;
-        width: 60px; height: 60px;
+        width: 48px; height: 48px;
         border-radius: 50%;
-        font-size: 28px;
+        font-size: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         z-index: 1000000;
       }}
-      .modal-nav:hover {{ background: #c5a880; color: #0f1115; }}
-      .modal-prev {{ left: 30px; }}
-      .modal-next {{ right: 30px; }}
+      .modal-prev {{ left: 15px; }}
+      .modal-next {{ right: 15px; }}
       .modal-badge-container {{
         position: absolute;
-        bottom: 25px; left: 50%;
+        bottom: 20px; left: 50%;
         transform: translateX(-50%);
         background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
-        padding: 8px 22px;
-        border-radius: 25px;
-        font-size: 16px;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 14px;
         font-weight: bold;
         border: 1px solid #c5a880;
         z-index: 1000000;
@@ -275,6 +310,7 @@ def render_galeria(imagenes, is_es=True, height=580):
         let current = 0;
 
         function render() {{
+          if (photos.length === 0) return;
           const src = "data:image/jpeg;base64," + photos[current];
           document.getElementById('slide').src = src;
           document.getElementById('modal-slide').src = src;
@@ -341,22 +377,7 @@ db = cargar_datos()
 # Navegación en Barra Lateral
 st.sidebar.title("🚪 Acceso")
 modo = st.sidebar.radio("Navegación", ["Vista Cliente", "Panel de Administración"])
-
 st.sidebar.markdown("---")
-
-# BOTÓN DE DESCARGA DEL CÓDIGO FUENTE EN LA BARRA LATERAL
-try:
-    with open(__file__, "r", encoding="utf-8") as f:
-        codigo_fuente = f.read()
-    st.sidebar.download_button(
-        label="📥 Descargar plantilla app.py",
-        data=codigo_fuente,
-        file_name="app_dossier_base.py",
-        mime="text/x-python",
-        help="Descarga este script para usarlo como punto de partida en otros proyectos."
-    )
-except Exception:
-    pass
 
 # ==========================================
 # 1. VISTA CLIENTE
