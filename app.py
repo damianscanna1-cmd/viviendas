@@ -54,8 +54,8 @@ st.markdown("""
     /* Adaptación full width para inputs y contenedores en pantallas móviles */
     @media (max-width: 768px) {
         .block-container {
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
+            padding-left: 0.3rem !important;
+            padding-right: 0.3rem !important;
             padding-top: 0.5rem !important;
         }
     }
@@ -107,12 +107,12 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA CON PANTALLA COMPLETA REAL Y RESPONSIVE MÓVIL
+# COMPONENTE GALERÍA OPTIMIZADO PARA PANTALLA COMPLETA Y MÓVIL
 # -----------------------------------------------------------------------------
-def render_galeria(imagenes, is_es=True, height=520):
+def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
     expand_txt = "🔍 Ampliar Foto" if is_es else "🔍 Enlarge Photo"
-    close_txt = "✖ Cerrar [ESC]" if is_es else "✖ Close [ESC]"
+    close_txt = "✖ Cerrar" if is_es else "✖ Close"
     
     html_code = f"""
     <!DOCTYPE html>
@@ -120,44 +120,50 @@ def render_galeria(imagenes, is_es=True, height=520):
     <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-      body {{ margin: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; overflow: hidden; touch-action: pan-y; }}
+      * {{ box-sizing: border-box; }}
+      body {{ margin: 0; padding: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; overflow: hidden; touch-action: manipulation; }}
       
       .gallery-container {{
         position: relative;
         width: 100%;
-        max-width: 1100px;
-        aspect-ratio: 16 / 9;
+        height: 100vh;
+        max-height: 480px;
         margin: 0 auto;
-        background: #15181e;
-        border-radius: 12px;
+        background: #0f1115;
+        border-radius: 10px;
         overflow: hidden;
-        border: 1px solid #2a2d34;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
         user-select: none;
       }}
+      
       .img-wrapper {{
         width: 100%;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #000;
+        background: #0f1115;
       }}
+      
       .img-wrapper img {{
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
       }}
       
       .click-zone {{
         position: absolute;
         top: 0;
         height: 100%;
-        width: 35%;
+        width: 30%;
         cursor: pointer;
         display: flex;
         align-items: center;
-        z-index: 2;
+        z-index: 5;
       }}
       .click-zone-left {{ left: 0; justify-content: flex-start; padding-left: 10px; }}
       .click-zone-right {{ right: 0; justify-content: flex-end; padding-right: 10px; }}
@@ -167,21 +173,14 @@ def render_galeria(imagenes, is_es=True, height=520):
         color: #c5a880;
         font-size: 20px;
         font-weight: bold;
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         border: 1px solid #c5a880;
-        opacity: 0.8;
-        transition: all 0.2s ease;
-      }}
-      .click-zone:hover .arrow-btn {{
-        opacity: 1;
-        transform: scale(1.1);
-        background: rgba(197, 168, 128, 0.9);
-        color: #0f1115;
+        opacity: 0.85;
       }}
 
       .bottom-bar {{
@@ -192,8 +191,7 @@ def render_galeria(imagenes, is_es=True, height=520):
         justify-content: center;
         align-items: center;
         gap: 10px;
-        z-index: 3;
-        pointer-events: none;
+        z-index: 6;
       }}
       .counter-badge {{
         background: rgba(15, 17, 21, 0.85);
@@ -205,24 +203,22 @@ def render_galeria(imagenes, is_es=True, height=520):
         border: 1px solid #c5a880;
       }}
       .expand-btn {{
-        pointer-events: auto;
         background: rgba(197, 168, 128, 0.95);
         color: #0f1115;
-        padding: 5px 14px;
+        padding: 6px 14px;
         border-radius: 20px;
         font-size: 12px;
         font-weight: 700;
         border: 1px solid #c5a880;
         cursor: pointer;
-        transition: all 0.2s ease;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       }}
 
-      /* MODAL FULLSCREEN */
+      /* MODAL AMPLIA MÓVIL Y DESKTOP */
       .modal-overlay {{
         display: none;
         position: fixed;
-        top: 0; left: 0;
+        top: 0; left: 0; right: 0; bottom: 0;
         width: 100vw; height: 100vh;
         background: #000000;
         z-index: 999999;
@@ -230,11 +226,15 @@ def render_galeria(imagenes, is_es=True, height=520):
         align-items: center;
       }}
       .modal-overlay.active {{ display: flex; }}
-      .modal-img {{ width: 100vw; height: 100vh; object-fit: contain; }}
+      .modal-img {{
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }}
       .modal-close {{
         position: absolute;
         top: 15px; right: 15px;
-        background: rgba(197, 168, 128, 0.9);
+        background: rgba(197, 168, 128, 0.95);
         color: #0f1115;
         border: none;
         padding: 8px 18px;
@@ -260,8 +260,8 @@ def render_galeria(imagenes, is_es=True, height=520):
         cursor: pointer;
         z-index: 1000000;
       }}
-      .modal-prev {{ left: 15px; }}
-      .modal-next {{ right: 15px; }}
+      .modal-prev {{ left: 10px; }}
+      .modal-next {{ right: 10px; }}
       .modal-badge-container {{
         position: absolute;
         bottom: 20px; left: 50%;
@@ -274,6 +274,12 @@ def render_galeria(imagenes, is_es=True, height=520):
         font-weight: bold;
         border: 1px solid #c5a880;
         z-index: 1000000;
+      }}
+
+      @media (max-width: 768px) {{
+        .gallery-container {{
+          height: 380px;
+        }}
       }}
     </style>
     </head>
@@ -333,33 +339,17 @@ def render_galeria(imagenes, is_es=True, height=520):
         }}
 
         function openModal() {{
-          const modal = document.getElementById('modal');
-          modal.classList.add('active');
-          if (modal.requestFullscreen) {{
-            modal.requestFullscreen().catch(err => {{}});
-          }} else if (modal.webkitRequestFullscreen) {{
-            modal.webkitRequestFullscreen();
-          }}
+          document.getElementById('modal').classList.add('active');
         }}
 
         function closeModal() {{
-          const modal = document.getElementById('modal');
-          modal.classList.remove('active');
-          if (document.fullscreenElement) {{
-            document.exitFullscreen().catch(err => {{}});
-          }}
+          document.getElementById('modal').classList.remove('active');
         }}
 
         document.addEventListener('keydown', function(e) {{
           if (e.key === 'Escape') closeModal();
           if (e.key === 'ArrowRight') nextSlide();
           if (e.key === 'ArrowLeft') prevSlide();
-        }});
-
-        document.addEventListener('fullscreenchange', function() {{
-          if (!document.fullscreenElement) {{
-            document.getElementById('modal').classList.remove('active');
-          }}
         }});
 
         render();
@@ -551,3 +541,4 @@ elif modo == "Panel de Administración":
                     st.rerun()
                 elif new_id in db["propiedades"]:
                     st.error("Ese identificador ya existe.")
+               
