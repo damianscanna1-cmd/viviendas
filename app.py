@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import json
 
 # =====================================================================
-# 1. CONFIGURACIÓN INICIAL Y MODULO PANTALLA COMPLETA
+# 1. CONFIGURACIÓN INICIAL Y MODULO DE PANTALLA COMPLETA EN MÓVILES
 # =====================================================================
 st.set_page_config(
     page_title="GHS - Catálogo Inmobiliario",
@@ -12,20 +12,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialización de estado
+# Inicialización de estado de sesión
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 if "user_role" not in st.session_state:
     st.session_state["user_role"] = None
 
-# =====================================================================
-# 2. INYECCIÓN CSS CONDICIONAL (OCULTAR INTERFAZ Y AJUSTAR VIEWPORT)
-# =====================================================================
-# Si es CLIENTE o usuario no autenticado, se oculta completamente la barra de Streamlit
+# Inyección CSS Condicional: Oculta la barra superior SOLO si NO es admin
 if st.session_state.get("user_role") != "admin":
     st.markdown("""
         <style>
-            /* Ocultar barra de herramientas (Share, menú de 3 puntos, GitHub) para clientes */
+            /* Ocultar elementos nativos de interfaz de Streamlit (Share, GitHub, Menú) para clientes */
             header, footer, #MainMenu, 
             div[data-testid="stToolbar"], 
             div[data-testid="stDecoration"],
@@ -35,62 +32,68 @@ if st.session_state.get("user_role") != "admin":
                 height: 0px !important;
             }
 
-            /* Viewport dinámico estricto (100dvh) en móvil para eliminar bordes */
+            /* Viewport dinámico en móviles */
             html, body, [data-testid="stAppViewContainer"], .main {
                 height: 100dvh !important;
                 width: 100vw !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                overflow: hidden !important;
-                position: fixed !important;
-                top: 0;
-                left: 0;
+                overflow-x: hidden !important;
                 touch-action: manipulation;
-                background-color: #0e1117;
             }
 
             .main .block-container {
                 padding-top: 0rem !important;
                 padding-bottom: 0rem !important;
-                padding-left: 0rem !important;
-                padding-right: 0rem !important;
                 max-width: 100% !important;
-                height: 100dvh !important;
+            }
+
+            /* Botón flotante discreto de apoyo para usuarios (+30 años) */
+            .fs-btn {
+                position: fixed;
+                bottom: 15px;
+                right: 15px;
+                z-index: 999999;
+                background: rgba(0, 0, 0, 0.75);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 20px;
+                padding: 8px 16px;
+                font-size: 13px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                cursor: pointer;
+                backdrop-filter: blur(5px);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             }
         </style>
     """, unsafe_allow_html=True)
 else:
+    # Ajustes visuales cuando el Administrador tiene la barra visible
     st.markdown("""
         <style>
             .main .block-container {
                 padding-top: 2rem !important;
             }
+            .fs-btn {
+                position: fixed;
+                bottom: 15px;
+                right: 15px;
+                z-index: 999999;
+                background: rgba(0, 0, 0, 0.75);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 20px;
+                padding: 8px 16px;
+                font-size: 13px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                cursor: pointer;
+                backdrop-filter: blur(5px);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            }
         </style>
     """, unsafe_allow_html=True)
 
-# Botón flotante discreto para usuarios +30 años
-st.markdown("""
-    <style>
-        .fs-btn {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            z-index: 999999;
-            background: rgba(0, 0, 0, 0.8);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            cursor: pointer;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# SCRIPT JAVASCRIPT: Forzado de Pantalla Completa en Móvil al primer toque
+# JavaScript: Disparo automático al primer toque (tap/swipe) o pulsación manual del botón
 components.html("""
     <button class="fs-btn" id="fullScreenToggle" onclick="toggleFullScreen()">
         ⛶ Pantalla Completa
@@ -101,10 +104,8 @@ components.html("""
             var doc = window.parent.document.documentElement;
             if (doc.requestFullscreen) {
                 doc.requestFullscreen();
-            } else if (doc.webkitRequestFullscreen) { /* Safari / iOS / Chrome Mobile */
+            } else if (doc.webkitRequestFullscreen) { /* Safari / iOS / Android */
                 doc.webkitRequestFullscreen();
-            } else if (doc.mozRequestFullScreen) { /* Firefox */
-                doc.mozRequestFullScreen();
             } else if (doc.msRequestFullscreen) {
                 doc.msRequestFullscreen();
             }
@@ -123,12 +124,8 @@ components.html("""
             }
         }
 
-        // Eventos táctiles para activar pantalla completa en móvil automáticamente
+        // Activación automática e imperceptible al primer toque del usuario
         window.parent.document.addEventListener('touchstart', function() {
-            enableFullScreen();
-        }, { once: true });
-
-        window.parent.document.addEventListener('touchend', function() {
             enableFullScreen();
         }, { once: true });
 
@@ -139,8 +136,10 @@ components.html("""
 """, height=0, width=0)
 
 # =====================================================================
-# 3. BASE DE DATOS LOCAL Y ACCESO
+# 2. GESTIÓN DE AUTENTICACIÓN Y SESIÓN
 # =====================================================================
+
+# Base de datos local de propiedades
 if "properties" not in st.session_state:
     st.session_state["properties"] = [
         {
@@ -159,6 +158,7 @@ if "properties" not in st.session_state:
         }
     ]
 
+# Formulario de Acceso
 def login():
     st.markdown("<div style='padding: 40px 20px; text-align: center;'>", unsafe_allow_html=True)
     st.title("GHS Gestión Integral de Proyectos")
@@ -170,6 +170,7 @@ def login():
         submit = st.form_submit_button("Entrar")
         
         if submit:
+            # Compatibilidad con credenciales de desarrollo y producción
             if username == "admin" and password in ["admin123", "Admin2026Password"]:
                 st.session_state["authenticated"] = True
                 st.session_state["user_role"] = "admin"
@@ -187,7 +188,7 @@ if not st.session_state["authenticated"]:
     st.stop()
 
 # =====================================================================
-# 4. CARRUSEL TÁCTIL INTERACTIVO (SWIPER.JS)
+# 3. COMPONENTE DE CARRUSEL TÁCTIL INTERACTIVO (SWIPER.JS)
 # =====================================================================
 def render_property_carousel(prop, lang="es"):
     images_js = json.dumps(prop["images"])
@@ -204,9 +205,11 @@ def render_property_carousel(prop, lang="es"):
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0e1117; color: #fff; height: 100vh; overflow: hidden; }}
             .container {{ display: flex; flex-direction: column; height: 100vh; width: 100vw; }}
             
+            /* Carrusel táctil Swiper */
             .swiper {{ width: 100%; height: 52vh; }}
             .swiper-slide img {{ width: 100%; height: 100%; object-fit: cover; }}
             
+            /* Detalle de la propiedad */
             .details {{ flex: 1; padding: 20px; overflow-y: auto; background: #161b22; border-top-left-radius: 20px; border-top-right-radius: 20px; margin-top: -15px; position: relative; z-index: 10; }}
             .header-line {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }}
             .title {{ font-size: 20px; font-weight: 700; color: #ffffff; }}
@@ -214,6 +217,7 @@ def render_property_carousel(prop, lang="es"):
             .location {{ font-size: 13px; color: #8b949e; margin-bottom: 15px; }}
             .desc {{ font-size: 14px; line-height: 1.5; color: #c9d1d9; margin-bottom: 20px; }}
             
+            /* Botón de Contacto por WhatsApp */
             .whatsapp-btn {{
                 display: flex;
                 align-items: center;
@@ -278,8 +282,9 @@ def render_property_carousel(prop, lang="es"):
     components.html(html_code, height=750, scrolling=False)
 
 # =====================================================================
-# 5. RENDERIZADO POR ROLES
+# 4. INTERFAZ DE USUARIO SEGÚN ROL (ADMIN Y CLIENTE)
 # =====================================================================
+# Menú Lateral / Configuración
 lang = st.sidebar.radio("Idioma / Language", ["ES", "EN"])
 selected_lang = "es" if lang == "ES" else "en"
 
@@ -288,10 +293,10 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state["user_role"] = None
     st.rerun()
 
-# VISTA DE ADMINISTRADOR
+# PANEL DE ADMINISTRADOR
 if st.session_state["user_role"] == "admin":
     st.sidebar.title("Panel de Control")
-    st.title("Gestión de Inmuebles (Administrador)")
+    st.title("Gestión de Inmuebles")
     
     with st.expander("➕ Agregar Nueva Propiedad"):
         new_title = st.text_input("Título de la Propiedad")
@@ -321,7 +326,7 @@ if st.session_state["user_role"] == "admin":
     for prop in st.session_state["properties"]:
         render_property_carousel(prop, lang=selected_lang)
 
-# VISTA DE CLIENTE (Limpia, sin barra superior y ajustada al móvil)
+# VISTA DE CLIENTE
 else:
     for prop in st.session_state["properties"]:
         render_property_carousel(prop, lang=selected_lang)
