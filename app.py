@@ -402,6 +402,11 @@ if modo == "Vista Cliente":
             else:
                 st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
 
+            # Vídeo (Ubicado inmediatamente debajo de las fotos)
+            if prop_data.get("video_url"):
+                st.subheader("Recorrido en Vídeo" if is_es else "Video Tour")
+                st.video(prop_data["video_url"])
+
             st.markdown("---")
 
             # Métricas
@@ -415,11 +420,6 @@ if modo == "Vista Cliente":
             st.subheader("Descripción" if is_es else "Description")
             desc = prop_data["descripcion_es"] if is_es else prop_data["descripcion_en"]
             st.write(desc)
-
-            # Vídeo
-            if prop_data.get("video_url"):
-                st.subheader("Recorrido en Vídeo" if is_es else "Video Tour")
-                st.video(prop_data["video_url"])
 
             st.markdown("---")
             st.link_button(
@@ -541,4 +541,3 @@ elif modo == "Panel de Administración":
                     st.rerun()
                 elif new_id in db["propiedades"]:
                     st.error("Ese identificador ya existe.")
-               
