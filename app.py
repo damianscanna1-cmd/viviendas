@@ -107,7 +107,7 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA CON PANTALLA COMPLETA TOTAL EN MÓVIL
+# COMPONENTE GALERÍA CON PANTALLA COMPLETA TOTAL SIN MÁRGENES
 # -----------------------------------------------------------------------------
 def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
@@ -334,8 +334,8 @@ def render_galeria(imagenes, is_es=True, height=480):
               ">&#10094;</div>
 
               <img id="ghs-modal-img" src="" style="
-                max-width: 100vw; max-height: 100vh; max-height: 100dvh;
-                width: 100%; height: 100%; object-fit: contain; background: #000;
+                width: 100vw; height: 100vh; height: 100dvh;
+                object-fit: cover; background: #000;
               ">
 
               <div id="ghs-modal-next" style="
