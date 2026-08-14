@@ -107,7 +107,7 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA OPTIMIZADO PARA PANTALLA COMPLETA Y MÓVIL
+# COMPONENTE GALERÍA OPTIMIZADO CON PANTALLA COMPLETA NATIVA
 # -----------------------------------------------------------------------------
 def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
@@ -214,7 +214,7 @@ def render_galeria(imagenes, is_es=True, height=480):
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       }}
 
-      /* MODAL AMPLIA MÓVIL Y DESKTOP */
+      /* MODAL FULLSCREEN COMPLETO */
       .modal-overlay {{
         display: none;
         position: fixed;
@@ -227,9 +227,10 @@ def render_galeria(imagenes, is_es=True, height=480):
       }}
       .modal-overlay.active {{ display: flex; }}
       .modal-img {{
-        width: 100%;
-        height: 100%;
+        width: 100vw;
+        height: 100vh;
         object-fit: contain;
+        background: #000;
       }}
       .modal-close {{
         position: absolute;
@@ -339,12 +340,41 @@ def render_galeria(imagenes, is_es=True, height=480):
         }}
 
         function openModal() {{
-          document.getElementById('modal').classList.add('active');
+          const modal = document.getElementById('modal');
+          modal.classList.add('active');
+          
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {{
+            elem.requestFullscreen().catch(err => {{}});
+          }} else if (elem.webkitRequestFullscreen) {{
+            elem.webkitRequestFullscreen();
+          }} else if (elem.mozRequestFullScreen) {{
+            elem.mozRequestFullScreen();
+          }}
         }}
 
         function closeModal() {{
           document.getElementById('modal').classList.remove('active');
+          if (document.fullscreenElement || document.webkitFullscreenElement) {{
+            if (document.exitFullscreen) {{
+              document.exitFullscreen().catch(err => {{}});
+            }} else if (document.webkitExitFullscreen) {{
+              document.webkitExitFullscreen();
+            }}
+          }}
         }}
+
+        document.addEventListener('fullscreenchange', function() {{
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {{
+            document.getElementById('modal').classList.remove('active');
+          }}
+        }});
+
+        document.addEventListener('webkitfullscreenchange', function() {{
+          if (!document.webkitFullscreenElement) {{
+            document.getElementById('modal').classList.remove('active');
+          }}
+        }});
 
         document.addEventListener('keydown', function(e) {{
           if (e.key === 'Escape') closeModal();
