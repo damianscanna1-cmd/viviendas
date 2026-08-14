@@ -7,7 +7,7 @@ import io
 import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
-# CONFIGURACIÓN DE PÁGINA Y ESTILOS (ANTI-SCROLL, OCULTAR MENÚS, INSIGNIAS Y FLOTANTES)
+# CONFIGURACIÓN DE PÁGINA Y ESTILOS (BLOQUEO TOTAL DE INSIGNIAS Y FLOTANTES)
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Dossier Inmobiliario Privado",
@@ -18,24 +18,28 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    /* Ocultar barra superior, badges flotantes, icono de GitHub/Streamlit, avatar y menú */
-    #MainMenu {visibility: hidden !important; display: none !important;}
-    header {visibility: hidden !important; display: none !important;}
-    footer {visibility: hidden !important; display: none !important;}
-    .stAppDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important; display: none !important; height: 0px !important;}
-    [data-testid="stDecoration"] {display: none !important;}
-    [data-testid="stStatusWidget"] {visibility: hidden !important; display: none !important;}
-    [data-testid="stHeader"] {display: none !important;}
-    
-    /* Ocultar elementos flotantes adicionales de Streamlit Cloud (badge rojo, avatar, etc.) */
-    div[class*="viewerBadge"], 
-    div[class*="stActionButton"], 
-    div[class*="stToolbar"],
-    .viewerBadge_container__1630n,
-    .viewerBadge_link__1S137 {
+    /* Ocultamiento estricto y bloqueo absoluto de elementos flotantes, badges y toolbar */
+    #MainMenu, header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], 
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stAppDeployButton {
         display: none !important;
         visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        height: 0px !important;
+        max-height: 0px !important;
+    }
+    
+    /* Bloqueo específico para cualquier badge flotante inferior derecho (Streamlit Cloud / Insignias) */
+    div[class*="viewerBadge"], 
+    div[class*="stActionButton"], 
+    div[class*="viewerBadge_container"],
+    iframe[src*="streamlit"],
+    section[data-testid="stSidebar"] ~ div div[class*="viewerBadge"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -999999 !important;
     }
     
     /* Configuración Global y Anti-Scroll para móviles */
@@ -84,7 +88,7 @@ def image_to_base64(image_file):
     img = Image.open(image_file)
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
-    img.thumbnail((1600, 1200)) # Redimensionar para optimización
+    img.thumbnail((1600, 1200))
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode()
@@ -366,12 +370,10 @@ def render_galeria(imagenes, is_es=True, height=480):
 
             doc.body.appendChild(overlay);
 
-            // Asignación de Eventos Táctiles y Clics
             doc.getElementById('ghs-modal-close').onclick = closeModal;
             doc.getElementById('ghs-modal-prev').onclick = (e) => {{ prevSlide(e); }};
             doc.getElementById('ghs-modal-next').onclick = (e) => {{ nextSlide(e); }};
 
-            // Detección de Gestos Táctiles (Swipe Horizontal) para Móviles
             let startX = 0;
             overlay.ontouchstart = (e) => {{ startX = e.touches[0].clientX; }};
             overlay.ontouchend = (e) => {{
@@ -384,7 +386,6 @@ def render_galeria(imagenes, is_es=True, height=480):
           overlay.style.display = 'flex';
           render();
 
-          // Activar también la API nativa del navegador en dispositivos soportados
           const el = doc.documentElement;
           if (el.requestFullscreen) el.requestFullscreen().catch(() => {{}});
           else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
@@ -419,14 +420,10 @@ def render_galeria(imagenes, is_es=True, height=480):
 # -----------------------------------------------------------------------------
 db = cargar_datos()
 
-# Navegación en Barra Lateral
 st.sidebar.title("🚪 Acceso")
 modo = st.sidebar.radio("Navegación", ["Vista Cliente", "Panel de Administración"])
 st.sidebar.markdown("---")
 
-# ==========================================
-# 1. VISTA CLIENTE
-# ==========================================
 if modo == "Vista Cliente":
     lang = st.sidebar.selectbox("🌐 Idioma / Language", ["Español 🇪🇸", "English 🇬🇧"])
     is_es = "Español" in lang
@@ -444,12 +441,10 @@ if modo == "Vista Cliente":
             st.success("Acceso autorizado" if is_es else "Access granted")
             st.markdown("---")
 
-            # Encabezado
             titulo = prop_data["titulo_es"] if is_es else prop_data["titulo_en"]
             st.header(titulo)
             st.caption(f"📍 {prop_data['ubicacion']}")
 
-            # Galería
             imagenes = prop_data.get("imagenes", [])
             if imagenes:
                 st.subheader("📸 Galería de Fotografías" if is_es else "📸 Photo Gallery")
@@ -457,21 +452,18 @@ if modo == "Vista Cliente":
             else:
                 st.info("No hay fotos subidas para esta propiedad." if is_es else "No photos uploaded yet.")
 
-            # Vídeo (Ubicado inmediatamente debajo de las fotos)
             if prop_data.get("video_url"):
                 st.subheader("Recorrido en Vídeo" if is_es else "Video Tour")
                 st.video(prop_data["video_url"])
 
             st.markdown("---")
 
-            # Métricas
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Superficie / Area", prop_data["superficie"])
             col2.metric("Habitaciones / Beds", prop_data["habitaciones"])
             col3.metric("Baños / Baths", prop_data["banos"])
             col4.metric("Precio / Price", prop_data["precio"])
 
-            # Descripción
             st.subheader("Descripción" if is_es else "Description")
             desc = prop_data["descripcion_es"] if is_es else prop_data["descripcion_en"]
             st.write(desc)
@@ -486,9 +478,6 @@ if modo == "Vista Cliente":
     else:
         st.info("No hay propiedades disponibles.")
 
-# ==========================================
-# 2. PANEL DE ADMINISTRACIÓN
-# ==========================================
 elif modo == "Panel de Administración":
     st.title("🛠️ Panel de Control - Administración")
     
