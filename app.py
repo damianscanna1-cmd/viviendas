@@ -107,7 +107,7 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA CON PANTALLA COMPLETA NATIVA TIPO VÍDEO
+# COMPONENTE GALERÍA CON PANTALLA COMPLETA TOTAL EN MÓVIL
 # -----------------------------------------------------------------------------
 def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
@@ -224,90 +224,9 @@ def render_galeria(imagenes, is_es=True, height=480):
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       }}
 
-      /* MODAL FULLSCREEN COMPORTAMIENTO TIPO REPRODUCTOR VÍDEO */
-      .modal-overlay {{
-        display: none;
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        width: 100vw; 
-        height: 100vh;
-        background: #000000;
-        z-index: 2147483647;
-        justify-content: center;
-        align-items: center;
-      }}
-      
-      .modal-overlay.active,
-      .modal-overlay:fullscreen,
-      .modal-overlay:-webkit-full-screen {{
-        display: flex !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: #000000 !important;
-      }}
-
-      .modal-img {{
-        width: 100%;
-        height: 100%;
-        max-width: 100vw;
-        max-height: 100vh;
-        object-fit: contain;
-        background: #000000;
-      }}
-      .modal-close {{
-        position: absolute;
-        top: 20px; right: 20px;
-        background: rgba(197, 168, 128, 0.95);
-        color: #0f1115;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 14px;
-        cursor: pointer;
-        z-index: 2147483647;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-      }}
-      .modal-nav {{
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(15, 17, 21, 0.85);
-        color: #c5a880;
-        border: 1px solid #c5a880;
-        width: 48px; height: 48px;
-        border-radius: 50%;
-        font-size: 22px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        z-index: 2147483647;
-      }}
-      .modal-prev {{ left: 12px; }}
-      .modal-next {{ right: 12px; }}
-      .modal-badge-container {{
-        position: absolute;
-        bottom: 25px; left: 50%;
-        transform: translateX(-50%);
-        background: rgba(15, 17, 21, 0.85);
-        color: #c5a880;
-        padding: 6px 18px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: bold;
-        border: 1px solid #c5a880;
-        z-index: 2147483647;
-      }}
-
       @media (max-width: 768px) {{
         .gallery-container {{
           height: 380px;
-        }}
-        .modal-close {{
-          top: 15px;
-          right: 15px;
-          padding: 8px 16px;
         }}
       }}
     </style>
@@ -332,27 +251,32 @@ def render_galeria(imagenes, is_es=True, height=480):
         </div>
       </div>
 
-      <div id="modal" class="modal-overlay">
-        <button class="modal-close" onclick="closeModal()">{close_txt}</button>
-        <div class="modal-nav modal-prev" onclick="prevSlide(event)">&#10094;</div>
-        <img id="modal-slide" class="modal-img" src="" alt="Pantalla Completa">
-        <div class="modal-nav modal-next" onclick="nextSlide(event)">&#10095;</div>
-        <div id="modal-badge" class="modal-badge-container">1/1</div>
-      </div>
-
       <script>
         const photos = {imgs_json};
         let current = 0;
+
+        function getTargetDoc() {{
+          try {{
+            if (window.top && window.top.document && window.top.document.body) {{
+              return window.top.document;
+            }}
+          }} catch(e) {{}}
+          return document;
+        }}
 
         function render() {{
           if (photos.length === 0) return;
           const src = "data:image/jpeg;base64," + photos[current];
           document.getElementById('slide').src = src;
-          document.getElementById('modal-slide').src = src;
           
           const label = (current + 1) + "/" + photos.length;
           document.getElementById('badge').innerText = label;
-          document.getElementById('modal-badge').innerText = label;
+
+          const doc = getTargetDoc();
+          const modalImg = doc.getElementById('ghs-modal-img');
+          const modalBadge = doc.getElementById('ghs-modal-badge');
+          if (modalImg) modalImg.src = src;
+          if (modalBadge) modalBadge.innerText = label;
         }}
 
         function nextSlide(e) {{
@@ -368,40 +292,101 @@ def render_galeria(imagenes, is_es=True, height=480):
         }}
 
         function openModal() {{
-          const modal = document.getElementById('modal');
-          modal.classList.add('active');
-          
-          // Solicitar pantalla completa nativa sobre el propio elemento visor (modo vídeo nativo)
-          if (modal.requestFullscreen) {{
-            modal.requestFullscreen().catch(() => {{}});
-          }} else if (modal.webkitRequestFullscreen) {{
-            modal.webkitRequestFullscreen();
-          }} else if (modal.msRequestFullscreen) {{
-            modal.msRequestFullscreen();
+          if (photos.length === 0) return;
+          const doc = getTargetDoc();
+          let overlay = doc.getElementById('ghs-mobile-fullscreen-modal');
+
+          if (!overlay) {{
+            overlay = doc.createElement('div');
+            overlay.id = 'ghs-mobile-fullscreen-modal';
+            overlay.style.cssText = `
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100vw !important;
+              height: 100vh !important;
+              height: 100dvh !important;
+              background-color: #000000 !important;
+              z-index: 2147483647 !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              user-select: none !important;
+              touch-action: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            `;
+
+            overlay.innerHTML = `
+              <button id="ghs-modal-close" style="
+                position: absolute; top: 20px; right: 20px;
+                background: rgba(197, 168, 128, 0.95); color: #0f1115;
+                border: none; padding: 10px 20px; border-radius: 20px;
+                font-weight: bold; font-size: 14px; cursor: pointer; z-index: 2147483647;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+              ">{close_txt}</button>
+
+              <div id="ghs-modal-prev" style="
+                position: absolute; top: 50%; left: 15px; transform: translateY(-50%);
+                background: rgba(15, 17, 21, 0.85); color: #c5a880; border: 1px solid #c5a880;
+                width: 48px; height: 48px; border-radius: 50%; font-size: 24px;
+                display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2147483647;
+              ">&#10094;</div>
+
+              <img id="ghs-modal-img" src="" style="
+                max-width: 100vw; max-height: 100vh; max-height: 100dvh;
+                width: 100%; height: 100%; object-fit: contain; background: #000;
+              ">
+
+              <div id="ghs-modal-next" style="
+                position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+                background: rgba(15, 17, 21, 0.85); color: #c5a880; border: 1px solid #c5a880;
+                width: 48px; height: 48px; border-radius: 50%; font-size: 24px;
+                display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2147483647;
+              ">&#10095;</div>
+
+              <div id="ghs-modal-badge" style="
+                position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+                background: rgba(15, 17, 21, 0.85); color: #c5a880; padding: 6px 18px;
+                border-radius: 20px; font-size: 14px; font-weight: bold; border: 1px solid #c5a880;
+                z-index: 2147483647;
+              ">1/1</div>
+            `;
+
+            doc.body.appendChild(overlay);
+
+            // Asignación de Eventos Táctiles y Clics
+            doc.getElementById('ghs-modal-close').onclick = closeModal;
+            doc.getElementById('ghs-modal-prev').onclick = (e) => {{ prevSlide(e); }};
+            doc.getElementById('ghs-modal-next').onclick = (e) => {{ nextSlide(e); }};
+
+            // Detección de Gestos Táctiles (Swipe Horizontal) para Móviles
+            let startX = 0;
+            overlay.ontouchstart = (e) => {{ startX = e.touches[0].clientX; }};
+            overlay.ontouchend = (e) => {{
+              let diffX = e.changedTouches[0].clientX - startX;
+              if (diffX > 40) prevSlide();
+              else if (diffX < -40) nextSlide();
+            }};
           }}
+
+          overlay.style.display = 'flex';
+          render();
+
+          // Activar también la API nativa del navegador en dispositivos soportados
+          const el = doc.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen().catch(() => {{}});
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
         }}
 
         function closeModal() {{
-          const modal = document.getElementById('modal');
-          modal.classList.remove('active');
-          
-          if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {{
-            if (document.exitFullscreen) {{
-              document.exitFullscreen().catch(() => {{}});
-            }} else if (document.webkitExitFullscreen) {{
-              document.webkitExitFullscreen();
-            }} else if (document.msExitFullscreen) {{
-              document.msExitFullscreen();
-            }}
-          }}
-        }}
+          const doc = getTargetDoc();
+          const overlay = doc.getElementById('ghs-mobile-fullscreen-modal');
+          if (overlay) overlay.style.display = 'none';
 
-        document.addEventListener('fullscreenchange', handleFSChange);
-        document.addEventListener('webkitfullscreenchange', handleFSChange);
-        
-        function handleFSChange() {{
-          if (!document.fullscreenElement && !document.webkitFullscreenElement) {{
-            document.getElementById('modal').classList.remove('active');
+          if (doc.fullscreenElement || doc.webkitFullscreenElement) {{
+            if (doc.exitFullscreen) doc.exitFullscreen().catch(() => {{}});
+            else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
           }}
         }}
 
