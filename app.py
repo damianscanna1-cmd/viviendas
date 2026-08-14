@@ -1,89 +1,73 @@
 import streamlit as st
 import json
 import os
-import base64
-import io
-import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
-# BLOQUEO DE INTERFAZ Y SEGURIDAD: OCULTACIÓN ABSOLUTA DE ELEMENTOS
+# BLOQUEO ABSOLUTO DE ELEMENTOS DE STREAMLIT (CSS FORZADO)
 # -----------------------------------------------------------------------------
-st.set_page_config(
-    page_title="Dossier Privado",
-    page_icon="🔒",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Dossier GHS", layout="wide")
 
-# Inyección de CSS para eliminación total de elementos de la plataforma (Streamlit Cloud, badges, menús, etc)
 st.markdown("""
     <style>
-    /* Ocultar elementos de despliegue y menús de Streamlit */
-    #MainMenu, 
-    header, 
-    footer, 
-    .stAppDeployButton, 
-    [data-testid="stHeader"], 
-    [data-testid="stToolbar"], 
-    [data-testid="stDecoration"], 
-    [data-testid="stStatusWidget"],
-    div[class*="viewerBadge"],
-    div[class*="stActionButton"],
-    div[class*="block-container"] > div > div > div > a,
-    iframe {
+    /* Ocultamiento agresivo de todos los elementos de la plataforma Streamlit */
+    #MainMenu, header, footer, 
+    [data-testid="stHeader"], [data-testid="stToolbar"], 
+    [data-testid="stDecoration"], [data-testid="stStatusWidget"],
+    .stAppDeployButton, div[class*="viewerBadge"] {
         display: none !important;
         visibility: hidden !important;
-        opacity: 0 !important;
         pointer-events: none !important;
-        height: 0px !important;
-        width: 0px !important;
-        overflow: hidden !important;
-    }
-    
-    /* Eliminar el badge flotante inferior derecho */
-    footer { visibility: hidden !important; }
-    
-    /* Evitar interacción con elementos de la plataforma */
-    body {
-        -webkit-user-select: none;
-        user-select: none;
+        height: 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# LÓGICA DE NEGOCIO Y DATOS
+# LÓGICA DE DATOS
 # -----------------------------------------------------------------------------
 DATA_FILE = "propiedades.json"
-WHATSAPP_NUMBER = "34637128212"
-
 def cargar_datos():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {"propiedades": {}, "admin_password": "Admin2026Password"}
-
-def guardar_datos(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    return {"propiedades": {"ejemplo": {"password_cliente": "1234"}}, "admin_password": "admin"}
 
 db = cargar_datos()
 
 # -----------------------------------------------------------------------------
-# APLICACIÓN: ENTRADA CONTROLADA
+# NAVEGACIÓN Y AUTENTICACIÓN
 # -----------------------------------------------------------------------------
-st.title("🔒 Dossier Inmobiliario GHS")
+st.title("🔑 Acceso al Dossier GHS")
 
-# Solo se muestra el contenido tras autenticación simple, ocultando el resto del menú lateral
-modo = st.radio("Selecciona perfil:", ["Cliente", "Administrador"])
+# Radio button para el usuario
+opcion = st.radio("Seleccione su tipo de acceso:", ["Cliente", "Administrador"])
 
-if modo == "Administrador":
-    pass_in = st.text_input("Clave Admin:", type="password")
-    if pass_in == db["admin_password"]:
-        st.write("Panel de gestión habilitado.")
-        # Aquí iría la lógica administrativa...
-    else:
-        st.error("Acceso restringido.")
-else:
-    # Lógica de vista cliente (reducida para seguridad)
-    st.write("Bienvenido al dossier privado.")
+if opcion == "Cliente":
+    st.subheader("Acceso a Propiedades")
+    clave = st.text_input("Introduzca su contraseña de cliente:", type="password")
+    
+    # Verificación de acceso para cliente
+    acceso_concedido = False
+    prop_permitida = None
+    
+    for id_prop, datos in db["propiedades"].items():
+        if clave == datos["password_cliente"]:
+            acceso_concedido = True
+            prop_permitida = datos
+            break
+            
+    if acceso_concedido:
+        st.success("Acceso autorizado.")
+        st.write("Bienvenido, aquí puede visualizar el dossier privado.")
+        # Aquí renderizas los datos de prop_permitida
+    elif clave != "":
+        st.error("Contraseña incorrecta.")
+
+elif opcion == "Administrador":
+    st.subheader("Panel de Gestión")
+    clave_admin = st.text_input("Clave de administrador:", type="password")
+    if clave_admin == db["admin_password"]:
+        st.success("Sesión administrativa iniciada.")
+        # Aquí renderizas las funciones de edición
+    elif clave_admin != "":
+        st.error("Clave denegada.")
