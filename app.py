@@ -12,21 +12,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialización de estado de sesión
+# Inicialización del rol en la sesión
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 if "user_role" not in st.session_state:
     st.session_state["user_role"] = None
 
-# Inyección CSS Condicional: Oculta la barra superior SOLO si NO es admin
+# Ocultar barra superior SOLO cuando el usuario NO es administrador
 if st.session_state.get("user_role") != "admin":
     st.markdown("""
         <style>
-            /* Ocultar elementos nativos de interfaz de Streamlit (Share, GitHub, Menú) para clientes */
-            header, footer, #MainMenu, 
-            div[data-testid="stToolbar"], 
-            div[data-testid="stDecoration"],
-            div[data-testid="stHeader"] {
+            /* Ocultar elementos nativos de interfaz de Streamlit */
+            header, footer, #MainMenu, div[data-testid="stToolbar"] {
                 display: none !important;
                 visibility: hidden !important;
                 height: 0px !important;
@@ -68,7 +65,7 @@ if st.session_state.get("user_role") != "admin":
         </style>
     """, unsafe_allow_html=True)
 else:
-    # Ajustes visuales cuando el Administrador tiene la barra visible
+    # Estilos cuando el administrador inicia sesión (manteniendo la barra visible)
     st.markdown("""
         <style>
             .main .block-container {
