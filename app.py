@@ -7,7 +7,7 @@ import io
 import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
-# CONFIGURACIÓN DE PÁGINA Y ESTILOS (ANTI-SCROLL, OCULTAR MENÚS Y GITHUB)
+# CONFIGURACIÓN DE PÁGINA Y ESTILOS (ANTI-SCROLL, OCULTAR MENÚS, INSIGNIAS Y FLOTANTES)
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Dossier Inmobiliario Privado",
@@ -18,14 +18,25 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    /* Ocultar barra superior, icono de GitHub, opciones de deploy y menú de Streamlit */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* Ocultar barra superior, badges flotantes, icono de GitHub/Streamlit, avatar y menú */
+    #MainMenu {visibility: hidden !important; display: none !important;}
+    header {visibility: hidden !important; display: none !important;}
+    footer {visibility: hidden !important; display: none !important;}
     .stAppDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important; height: 0px !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important; display: none !important; height: 0px !important;}
     [data-testid="stDecoration"] {display: none !important;}
-    [data-testid="stStatusWidget"] {visibility: hidden !important;}
+    [data-testid="stStatusWidget"] {visibility: hidden !important; display: none !important;}
+    [data-testid="stHeader"] {display: none !important;}
+    
+    /* Ocultar elementos flotantes adicionales de Streamlit Cloud (badge rojo, avatar, etc.) */
+    div[class*="viewerBadge"], 
+    div[class*="stActionButton"], 
+    div[class*="stToolbar"],
+    .viewerBadge_container__1630n,
+    .viewerBadge_link__1S137 {
+        display: none !important;
+        visibility: hidden !important;
+    }
     
     /* Configuración Global y Anti-Scroll para móviles */
     html, body, .stApp {
@@ -107,7 +118,7 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA CON PANTALLA COMPLETA TOTAL EN MÓVIL
+# COMPONENTE GALERÍA CON PANTALLA COMPLETA TOTAL SIN MÁRGENES
 # -----------------------------------------------------------------------------
 def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
@@ -334,8 +345,8 @@ def render_galeria(imagenes, is_es=True, height=480):
               ">&#10094;</div>
 
               <img id="ghs-modal-img" src="" style="
-                max-width: 100vw; max-height: 100vh; max-height: 100dvh;
-                width: 100%; height: 100%; object-fit: contain; background: #000;
+                width: 100vw; height: 100vh; height: 100dvh;
+                object-fit: cover; background: #000;
               ">
 
               <div id="ghs-modal-next" style="
