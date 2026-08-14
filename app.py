@@ -107,7 +107,7 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA OPTIMIZADO CON PANTALLA COMPLETA NATIVA
+# COMPONENTE GALERÍA OPTIMIZADO PARA PANTALLA COMPLETA EN MÓVILES
 # -----------------------------------------------------------------------------
 def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
@@ -118,10 +118,20 @@ def render_galeria(imagenes, is_es=True, height=480):
     <!DOCTYPE html>
     <html>
     <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <style>
       * {{ box-sizing: border-box; }}
-      body {{ margin: 0; padding: 0; background-color: #0f1115; font-family: system-ui, -apple-system, sans-serif; color: #f3f4f6; overflow: hidden; touch-action: manipulation; }}
+      html, body {{ 
+        margin: 0; 
+        padding: 0; 
+        width: 100%;
+        height: 100%;
+        background-color: #0f1115; 
+        font-family: system-ui, -apple-system, sans-serif; 
+        color: #f3f4f6; 
+        overflow: hidden; 
+        touch-action: manipulation; 
+      }}
       
       .gallery-container {{
         position: relative;
@@ -214,36 +224,40 @@ def render_galeria(imagenes, is_es=True, height=480):
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       }}
 
-      /* MODAL FULLSCREEN COMPLETO */
+      /* MODAL AMPLIA FULLSCREEN ADAPTADO A MÓVILES */
       .modal-overlay {{
         display: none;
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        width: 100vw; height: 100vh;
+        width: 100vw; 
+        height: 100vh;
         background: #000000;
-        z-index: 999999;
+        z-index: 2147483647; /* Máximo z-index posible */
         justify-content: center;
         align-items: center;
       }}
       .modal-overlay.active {{ display: flex; }}
       .modal-img {{
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
+        max-width: 100vw;
+        max-height: 100vh;
         object-fit: contain;
-        background: #000;
+        background: #000000;
       }}
       .modal-close {{
         position: absolute;
-        top: 15px; right: 15px;
+        top: 20px; right: 20px;
         background: rgba(197, 168, 128, 0.95);
         color: #0f1115;
         border: none;
-        padding: 8px 18px;
+        padding: 10px 20px;
         border-radius: 20px;
         font-weight: bold;
-        font-size: 13px;
+        font-size: 14px;
         cursor: pointer;
-        z-index: 1000000;
+        z-index: 2147483647;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.5);
       }}
       .modal-nav {{
         position: absolute;
@@ -259,13 +273,13 @@ def render_galeria(imagenes, is_es=True, height=480):
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        z-index: 1000000;
+        z-index: 2147483647;
       }}
-      .modal-prev {{ left: 10px; }}
-      .modal-next {{ right: 10px; }}
+      .modal-prev {{ left: 12px; }}
+      .modal-next {{ right: 12px; }}
       .modal-badge-container {{
         position: absolute;
-        bottom: 20px; left: 50%;
+        bottom: 25px; left: 50%;
         transform: translateX(-50%);
         background: rgba(15, 17, 21, 0.85);
         color: #c5a880;
@@ -274,12 +288,17 @@ def render_galeria(imagenes, is_es=True, height=480):
         font-size: 14px;
         font-weight: bold;
         border: 1px solid #c5a880;
-        z-index: 1000000;
+        z-index: 2147483647;
       }}
 
       @media (max-width: 768px) {{
         .gallery-container {{
           height: 380px;
+        }}
+        .modal-close {{
+          top: 15px;
+          right: 15px;
+          padding: 8px 16px;
         }}
       }}
     </style>
@@ -343,38 +362,42 @@ def render_galeria(imagenes, is_es=True, height=480):
           const modal = document.getElementById('modal');
           modal.classList.add('active');
           
-          const elem = document.documentElement;
-          if (elem.requestFullscreen) {{
-            elem.requestFullscreen().catch(err => {{}});
-          }} else if (elem.webkitRequestFullscreen) {{
-            elem.webkitRequestFullscreen();
-          }} else if (elem.mozRequestFullScreen) {{
-            elem.mozRequestFullScreen();
+          // Solicitar pantalla completa nativa en dispositivos compatibles
+          const target = document.documentElement;
+          if (target.requestFullscreen) {{
+            target.requestFullscreen().catch(() => {{}});
+          }} else if (target.webkitRequestFullscreen) {{
+            target.webkitRequestFullscreen();
+          }} else if (target.msRequestFullscreen) {{
+            target.msRequestFullscreen();
           }}
         }}
 
         function closeModal() {{
-          document.getElementById('modal').classList.remove('active');
-          if (document.fullscreenElement || document.webkitFullscreenElement) {{
+          const modal = document.getElementById('modal');
+          modal.classList.remove('active');
+          
+          // Salir de pantalla completa nativa si está activa
+          if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {{
             if (document.exitFullscreen) {{
-              document.exitFullscreen().catch(err => {{}});
+              document.exitFullscreen().catch(() => {{}});
             }} else if (document.webkitExitFullscreen) {{
               document.webkitExitFullscreen();
+            }} else if (document.msExitFullscreen) {{
+              document.msExitFullscreen();
             }}
           }}
         }}
 
-        document.addEventListener('fullscreenchange', function() {{
+        // Gestor de eventos para cuando el usuario sale con la tecla ESC o gesto del móvil
+        document.addEventListener('fullscreenchange', handleFSChange);
+        document.addEventListener('webkitfullscreenchange', handleFSChange);
+        
+        function handleFSChange() {{
           if (!document.fullscreenElement && !document.webkitFullscreenElement) {{
             document.getElementById('modal').classList.remove('active');
           }}
-        }});
-
-        document.addEventListener('webkitfullscreenchange', function() {{
-          if (!document.webkitFullscreenElement) {{
-            document.getElementById('modal').classList.remove('active');
-          }}
-        }});
+        }}
 
         document.addEventListener('keydown', function(e) {{
           if (e.key === 'Escape') closeModal();
