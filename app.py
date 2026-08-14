@@ -107,7 +107,7 @@ def guardar_datos(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 # -----------------------------------------------------------------------------
-# COMPONENTE GALERÍA OPTIMIZADO PARA PANTALLA COMPLETA EN MÓVILES
+# COMPONENTE GALERÍA CON PANTALLA COMPLETA NATIVA TIPO VÍDEO
 # -----------------------------------------------------------------------------
 def render_galeria(imagenes, is_es=True, height=480):
     imgs_json = json.dumps(imagenes)
@@ -224,7 +224,7 @@ def render_galeria(imagenes, is_es=True, height=480):
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       }}
 
-      /* MODAL AMPLIA FULLSCREEN ADAPTADO A MÓVILES */
+      /* MODAL FULLSCREEN COMPORTAMIENTO TIPO REPRODUCTOR VÍDEO */
       .modal-overlay {{
         display: none;
         position: fixed;
@@ -232,11 +232,20 @@ def render_galeria(imagenes, is_es=True, height=480):
         width: 100vw; 
         height: 100vh;
         background: #000000;
-        z-index: 2147483647; /* Máximo z-index posible */
+        z-index: 2147483647;
         justify-content: center;
         align-items: center;
       }}
-      .modal-overlay.active {{ display: flex; }}
+      
+      .modal-overlay.active,
+      .modal-overlay:fullscreen,
+      .modal-overlay:-webkit-full-screen {{
+        display: flex !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: #000000 !important;
+      }}
+
       .modal-img {{
         width: 100%;
         height: 100%;
@@ -362,14 +371,13 @@ def render_galeria(imagenes, is_es=True, height=480):
           const modal = document.getElementById('modal');
           modal.classList.add('active');
           
-          // Solicitar pantalla completa nativa en dispositivos compatibles
-          const target = document.documentElement;
-          if (target.requestFullscreen) {{
-            target.requestFullscreen().catch(() => {{}});
-          }} else if (target.webkitRequestFullscreen) {{
-            target.webkitRequestFullscreen();
-          }} else if (target.msRequestFullscreen) {{
-            target.msRequestFullscreen();
+          // Solicitar pantalla completa nativa sobre el propio elemento visor (modo vídeo nativo)
+          if (modal.requestFullscreen) {{
+            modal.requestFullscreen().catch(() => {{}});
+          }} else if (modal.webkitRequestFullscreen) {{
+            modal.webkitRequestFullscreen();
+          }} else if (modal.msRequestFullscreen) {{
+            modal.msRequestFullscreen();
           }}
         }}
 
@@ -377,7 +385,6 @@ def render_galeria(imagenes, is_es=True, height=480):
           const modal = document.getElementById('modal');
           modal.classList.remove('active');
           
-          // Salir de pantalla completa nativa si está activa
           if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {{
             if (document.exitFullscreen) {{
               document.exitFullscreen().catch(() => {{}});
@@ -389,7 +396,6 @@ def render_galeria(imagenes, is_es=True, height=480):
           }}
         }}
 
-        // Gestor de eventos para cuando el usuario sale con la tecla ESC o gesto del móvil
         document.addEventListener('fullscreenchange', handleFSChange);
         document.addEventListener('webkitfullscreenchange', handleFSChange);
         
