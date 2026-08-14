@@ -1,4 +1,3 @@
-Python
 import streamlit as st
 import streamlit.components.v1 as components
 import urllib.parse
@@ -332,3 +331,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
