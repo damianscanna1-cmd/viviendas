@@ -230,10 +230,10 @@ def render_galeria(imagenes, is_es=True, height=480):
     components.html(html_code, height=height)
 
 # -----------------------------------------------------------------------------
-# APLICACIÓN PRINCIPAL CON ACCESO RESTRINGIDO POR CONTRASEÑA DE ADMIN
+# APLICACIÓN PRINCIPAL CON SEGURIDAD ESTRICTA (BLOQUEO DE CREACIÓN / ADMIN)
 # -----------------------------------------------------------------------------
 st.sidebar.title("🚪 Navegación")
-modo = st.sidebar.radio("Modo de Acceso", ["Vista Cliente", "Panel de Administración"])
+modo = st.sidebar.radio("Modo de Acceso", ["Vista Cliente", "Panel de Administración (Crear/Editar)"])
 st.sidebar.markdown("---")
 
 if modo == "Vista Cliente":
@@ -289,13 +289,13 @@ if modo == "Vista Cliente":
     else:
         st.info("No hay propiedades disponibles.")
 
-elif modo == "Panel de Administración":
+elif modo == "Panel de Administración (Crear/Editar)":
     st.title("🛠️ Panel de Control - Administración")
     
-    admin_pass = st.text_input("Contraseña exclusiva de Administrador:", type="password")
+    admin_pass = st.text_input("Contraseña exclusiva de Administrador (para Crear y Editar):", type="password")
     
     if admin_pass == db["admin_password"]:
-        st.success("Sesión de administrador activa.")
+        st.success("Sesión de administrador activa. Funciones de creación y edición desbloqueadas.")
         
         tab1, tab2 = st.tabs(["Editar Propiedad", "Crear Nueva Propiedad"])
 
@@ -357,7 +357,7 @@ elif modo == "Panel de Administración":
 
                     p_data["superficie"] = col_a.text_input("Superficie", p_data["superficie"])
                     p_data["habitaciones"] = col_a.text_input("Habitaciones", p_data["habitaciones"])
-                    p_data["banos"] = col_a.text_input("Baños", p_data["banos"])
+                    p_data["banos"] = col_b.text_input("Baños", p_data["banos"])
                     
                     p_data["password_cliente"] = col_b.text_input("Contraseña para el Cliente", p_data["password_cliente"])
 
@@ -396,5 +396,4 @@ elif modo == "Panel de Administración":
                 elif new_id in db["propiedades"]:
                     st.error("Ese identificador ya existe.")
     elif admin_pass != "":
-        st.error("Clave de administrador incorrecta. Acceso denegado.")
-        
+        st.error("Clave de administrador incorrecta. Acceso denegado a la creación y gestión.")
